@@ -1,11 +1,3 @@
-//
-//  AddPropertyView.swift
-//  HomeWorth
-//
-//  Created by Subi Suresh on 11/08/2025.
-//
-
-
 // HomeWorth/Views/AddPropertyView.swift
 import SwiftUI
 
@@ -97,21 +89,37 @@ struct AddPropertyView: View {
                     }
                 }
                 
-                Section {
-                    Button("Get Price Prediction") {
+                Section(header: Text("Prediction & Pricing")) {
+                    Button("Predict Fair Price") {
                         viewModel.makePrediction()
                     }
                     .frame(maxWidth: .infinity)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
+                    
+                    Text("Predicted Fair Price: \(viewModel.formattedPrice)")
+                        .font(.headline)
+                        .foregroundColor(viewModel.predictedPrice != nil ? .green : .secondary)
+                    
+                    TextField("Your Asking Price (₹)", text: $viewModel.askingPrice)
+                        .keyboardType(.decimalPad)
                 }
 
-                Section(header: Text("Predicted Fair Price")) {
-                    Text(viewModel.formattedPrice)
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.green)
-                    Text(viewModel.message)
-                        .font(.caption)
+                Section {
+                    Button("Save Property") {
+                        Task {
+                            await viewModel.savePropertyToSupabase()
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.askingPrice.isEmpty)
+                }
+                
+                if !viewModel.message.isEmpty {
+                    Section {
+                        Text(viewModel.message)
+                            .foregroundColor(viewModel.message.contains("successfully") ? .green : .red)
+                    }
                 }
             }
             .navigationTitle("Add New Property")
