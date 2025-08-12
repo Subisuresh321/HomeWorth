@@ -173,6 +173,9 @@ class AddPropertyViewModel: ObservableObject {
     private let distanceRange = (min: 4.0, max: 6.0)
     private let ageRange = (min: 0.0, max: 20.0)
     private let bedroomsPerAreaRange = (min: 0.0, max: 0.01)
+    
+    // Valid ranges for clamping
+    private let builtYearRange = (min: 2005, max: 2025)
 
     init() {
         do {
@@ -180,6 +183,15 @@ class AddPropertyViewModel: ObservableObject {
         } catch {
             self.message = "Failed to load CoreML model: \(error.localizedDescription)"
         }
+    }
+    
+    // MARK: - Clamping Helper Functions
+    private func clampDistance(_ distance: Double) -> Double {
+        return max(distanceRange.min, min(distanceRange.max, distance))
+    }
+    
+    private func clampBuiltYear(_ year: Int) -> Int {
+        return max(builtYearRange.min, min(builtYearRange.max, year))
     }
 
     // MARK: - Prediction Function
@@ -191,23 +203,31 @@ class AddPropertyViewModel: ObservableObject {
             return
         }
 
-        // Validate and convert inputs
+        // Validate and convert inputs with clamping for distances and built year
         guard let areaValue = Double(area), areaValue > 0, areaValue <= 5000,
               let bedroomsValue = Int64(bedrooms), bedroomsValue > 0,
               let bathroomsValue = Int64(bathrooms), bathroomsValue > 0,
               let balconiesValue = Int64(balconies), balconiesValue >= 0,
-              let builtYearValue = Int64(builtYear), builtYearValue >= 2005, builtYearValue <= 2025,
+              let builtYearInput = Int(builtYear),
               let numberOfFloorsValue = Int64(numberOfFloors), numberOfFloorsValue > 0,
-              let atmDistanceValue = Double(atmDistance), atmDistanceValue >= 4.0, atmDistanceValue <= 6.0,
-              let hospitalDistanceValue = Double(hospitalDistance), hospitalDistanceValue >= 4.0, hospitalDistanceValue <= 6.0,
-              let schoolDistanceValue = Double(schoolDistance), schoolDistanceValue >= 4.0, schoolDistanceValue <= 6.0
+              let atmDistanceInput = Double(atmDistance),
+              let hospitalDistanceInput = Double(hospitalDistance),
+              let schoolDistanceInput = Double(schoolDistance)
         else {
-            self.message = "Invalid input. Ensure all fields are valid numbers, area ≤ 5000, bedrooms/bathrooms > 0, built year 2005–2025, and distances 4–6 km."
+            self.message = "Invalid input. Ensure all fields are valid numbers, area ≤ 5000, bedrooms/bathrooms > 0, and distances are positive numbers."
             self.predictedPrice = nil
             self.formattedPrice = "N/A"
             return
         }
-
+        
+        // Clamp inputs to valid ranges
+        let builtYearValue = clampBuiltYear(builtYearInput)
+        let atmDistanceValue = clampDistance(atmDistanceInput)
+        let hospitalDistanceValue = clampDistance(hospitalDistanceInput)
+        let schoolDistanceValue = clampDistance(schoolDistanceInput)
+        
+        
+       
         // Scale numerical inputs
         let scaledArea = scaleInput(areaValue, min: areaRange.min, max: areaRange.max)
         let scaledAtmDistance = scaleInput(atmDistanceValue, min: distanceRange.min, max: distanceRange.max)
@@ -220,24 +240,41 @@ class AddPropertyViewModel: ObservableObject {
         let bedroomsPerArea = Double(bedroomsValue) / areaValue
         let scaledBedroomsPerArea = scaleInput(bedroomsPerArea, min: bedroomsPerAreaRange.min, max: bedroomsPerAreaRange.max)
 
-        // Fixed: Calculate total_quality step by step to avoid compiler timeout
-        let cementGradeNormalized = cementGrade.rawValue == 43 ? 0.0 : 1.0
+        // Helper function to invert quality values (model expects inverted encoding)
+        func invertQuality(_ quality: Int, maxValue: Int = 2) -> Int {
+            return maxValue - quality
+        }
+
+        // Invert quality values because model was trained with inverted encoding
+        let invertedWoodQuality = woodQuality.rawValue
+        let invertedSteelGrade = steelGrade.rawValue
+        let invertedBrickType = brickType.rawValue
+        let invertedFlooringQuality = flooringQuality.rawValue
+        let invertedPaintQuality = paintQuality.rawValue
+        let invertedPlumbingQuality = plumbingQuality.rawValue
+        let invertedElectricalQuality = electricalQuality.rawValue
+        let invertedRoofingType = roofingType.rawValue
+        let invertedWindowGlassQuality = windowGlassQuality.rawValue
+        let invertedArea_type = areaType.rawValue
+        
+        // Calculate total_quality with inverted values
+        let cementGradeNormalized = cementGrade.rawValue
         let qualityValues: [Double] = [
-            Double(woodQuality.rawValue),
-            cementGradeNormalized,
-            Double(steelGrade.rawValue),
-            Double(brickType.rawValue),
-            Double(flooringQuality.rawValue),
-            Double(paintQuality.rawValue),
-            Double(plumbingQuality.rawValue),
-            Double(electricalQuality.rawValue),
-            Double(roofingType.rawValue),
-            Double(windowGlassQuality.rawValue)
+            Double(invertedWoodQuality),
+            Double(cementGradeNormalized),
+            Double(invertedSteelGrade),
+            Double(invertedBrickType),
+            Double(invertedFlooringQuality),
+            Double(invertedPaintQuality),
+            Double(invertedPlumbingQuality),
+            Double(invertedElectricalQuality),
+            Double(invertedRoofingType),
+            Double(invertedWindowGlassQuality)
         ]
         let qualitySum = qualityValues.reduce(0, +)
         let totalQuality = qualitySum / 10.0
 
-        // Fixed: Use the correct Core ML prediction method
+        // Use inverted values for Core ML prediction
         do {
             let input = HomeWorthModelInput(
                 area: scaledArea,
@@ -247,17 +284,17 @@ class AddPropertyViewModel: ObservableObject {
                 age: scaledAge,
                 avg_distance: scaledAvgDistance,
                 bedrooms_per_area: scaledBedroomsPerArea,
-                wood_quality: Int64(woodQuality.rawValue),
-                cement_grade: Int64(cementGrade.rawValue),
-                steel_grade: Int64(steelGrade.rawValue),
-                brick_type: Int64(brickType.rawValue),
-                flooring_quality: Int64(flooringQuality.rawValue),
-                paint_quality: Int64(paintQuality.rawValue),
-                plumbing_quality: Int64(plumbingQuality.rawValue),
-                electrical_quality: Int64(electricalQuality.rawValue),
-                roofing_type: Int64(roofingType.rawValue),
-                window_glass_quality: Int64(windowGlassQuality.rawValue),
-                area_type: Int64(areaType.rawValue),
+                wood_quality: Int64(invertedWoodQuality),
+                cement_grade: Int64(cementGrade.rawValue), // Keep cement grade as is (we handle inversion above)
+                steel_grade: Int64(invertedSteelGrade),
+                brick_type: Int64(invertedBrickType),
+                flooring_quality: Int64(invertedFlooringQuality),
+                paint_quality: Int64(invertedPaintQuality),
+                plumbing_quality: Int64(invertedPlumbingQuality),
+                electrical_quality: Int64(invertedElectricalQuality),
+                roofing_type: Int64(invertedRoofingType),
+                window_glass_quality: Int64(invertedWindowGlassQuality),
+                area_type: Int64(invertedArea_type),
                 balconies: balconiesValue,
                 bathrooms: bathroomsValue,
                 number_of_floors: numberOfFloorsValue,
@@ -273,7 +310,10 @@ class AddPropertyViewModel: ObservableObject {
             // Validate price per square foot (pps) is within 800–4500
             let pps = realPrice / areaValue
             if pps < 800 || pps > 4500 {
-                self.message = "Predicted price per square foot (₹\(Int(pps))) is outside realistic range (800–4500). Please check inputs."
+                var message = "Predicted price per square foot (₹\(Int(pps))) is outside realistic range (800–4500). Please check inputs."
+                
+                
+                self.message = message
                 self.predictedPrice = nil
                 self.formattedPrice = "N/A"
                 return
@@ -281,7 +321,11 @@ class AddPropertyViewModel: ObservableObject {
             
             self.predictedPrice = realPrice
             self.formattedPrice = formatPrice(realPrice)
-            self.message = "Predicted fair price: \(self.formattedPrice)"
+            
+            var successMessage = "Predicted fair price: \(self.formattedPrice)"
+            
+            self.message = successMessage
+            
         } catch {
             self.message = "Prediction failed: \(error.localizedDescription)"
             self.predictedPrice = nil
@@ -297,15 +341,21 @@ class AddPropertyViewModel: ObservableObject {
               let bedroomsValue = Int(bedrooms), bedroomsValue > 0,
               let bathroomsValue = Int(bathrooms), bathroomsValue > 0,
               let balconiesValue = Int(balconies), balconiesValue >= 0,
-              let builtYearValue = Int(builtYear), builtYearValue >= 2005, builtYearValue <= 2025,
+              let builtYearInput = Int(builtYear),
               let numberOfFloorsValue = Int(numberOfFloors), numberOfFloorsValue > 0,
-              let atmDistanceValue = Double(atmDistance), atmDistanceValue >= 4.0, atmDistanceValue <= 6.0,
-              let hospitalDistanceValue = Double(hospitalDistance), hospitalDistanceValue >= 4.0, hospitalDistanceValue <= 6.0,
-              let schoolDistanceValue = Double(schoolDistance), schoolDistanceValue >= 4.0, schoolDistanceValue <= 6.0
+              let atmDistanceInput = Double(atmDistance),
+              let hospitalDistanceInput = Double(hospitalDistance),
+              let schoolDistanceInput = Double(schoolDistance)
         else {
             self.message = "Please fill all fields with valid numbers."
             return
         }
+        
+        // Clamp values for saving (use the original user inputs but clamp for model consistency)
+        let builtYearValue = clampBuiltYear(builtYearInput)
+        let atmDistanceValue = clampDistance(atmDistanceInput)
+        let hospitalDistanceValue = clampDistance(hospitalDistanceInput)
+        let schoolDistanceValue = clampDistance(schoolDistanceInput)
 
         // Get current user ID asynchronously
         do {
@@ -321,11 +371,11 @@ class AddPropertyViewModel: ObservableObject {
                 bedrooms: bedroomsValue,
                 bathrooms: bathroomsValue,
                 balconies: balconiesValue,
-                builtYear: builtYearValue,
+                builtYear: builtYearValue, // Use clamped value
                 numberOfFloors: numberOfFloorsValue,
-                atmDistance: atmDistanceValue,
-                hospitalDistance: hospitalDistanceValue,
-                schoolDistance: schoolDistanceValue,
+                atmDistance: atmDistanceValue, // Use clamped value
+                hospitalDistance: hospitalDistanceValue, // Use clamped value
+                schoolDistance: schoolDistanceValue, // Use clamped value
                 woodQuality: woodQuality.rawValue,
                 cementGrade: cementGrade.rawValue,
                 steelGrade: steelGrade.rawValue,
