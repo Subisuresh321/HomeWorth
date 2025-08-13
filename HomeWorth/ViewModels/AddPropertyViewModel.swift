@@ -2,7 +2,7 @@
 import Foundation
 import CoreML
 
-// MARK: - Enums for Categorical Features
+// MARK: - Enums for Categorical Features (Updated to match Python)
 enum WoodQuality: Int, CaseIterable, Identifiable {
     case low = 0, medium = 1, high = 2
     var id: Int { self.rawValue }
@@ -135,8 +135,8 @@ enum AreaType: Int, CaseIterable, Identifiable {
 
 @MainActor
 class AddPropertyViewModel: ObservableObject {
-    // MARK: - Input Properties
-    @Published var area: String = ""
+    // MARK: - Input Properties (Updated to match Python ranges)
+    @Published var totalarea: String = ""  // Renamed from 'area' to match Python
     @Published var bedrooms: String = ""
     @Published var bathrooms: String = ""
     @Published var balconies: String = ""
@@ -146,7 +146,7 @@ class AddPropertyViewModel: ObservableObject {
     @Published var hospitalDistance: String = ""
     @Published var schoolDistance: String = ""
     
-    // Using the new enum types
+    // Categorical features using enums
     @Published var woodQuality: WoodQuality = .medium
     @Published var cementGrade: CementGrade = .grade43
     @Published var steelGrade: SteelGrade = .fe500
@@ -166,26 +166,25 @@ class AddPropertyViewModel: ObservableObject {
     @Published var askingPrice: String = ""
 
     // The Core ML model instance
-    private var model: HomeWorthModel?
+    private var model: HomeWorthModel2?
 
-    // Scaling ranges (must match Python MinMaxScaler)
-    private let areaRange = (min: 937.0, max: 5000.0)
-    private let distanceRange = (min: 4.0, max: 6.0)
-    private let ageRange = (min: 0.0, max: 20.0)
-    private let bedroomsPerAreaRange = (min: 0.0, max: 0.01)
+    // Scaling ranges matching Python dataset generation
+    private let totalareaRange = (min: 500.0, max: 3000.0)  // Updated range
+    private let distanceRange = (min: 0.1, max: 5.0)        // Updated range
+    private let ageRange = (min: 0.0, max: 50.0)            // Updated range
     
-    // Valid ranges for clamping
-    private let builtYearRange = (min: 2005, max: 2025)
+    // Valid input ranges
+    private let builtYearRange = (min: 1974, max: 2024)     // Updated to match age 0-50
 
     init() {
         do {
-            self.model = try HomeWorthModel(configuration: MLModelConfiguration())
+            self.model = try HomeWorthModel2(configuration: MLModelConfiguration())
         } catch {
             self.message = "Failed to load CoreML model: \(error.localizedDescription)"
         }
     }
     
-    // MARK: - Clamping Helper Functions
+    // MARK: - Input Validation and Clamping
     private func clampDistance(_ distance: Double) -> Double {
         return max(distanceRange.min, min(distanceRange.max, distance))
     }
@@ -193,8 +192,12 @@ class AddPropertyViewModel: ObservableObject {
     private func clampBuiltYear(_ year: Int) -> Int {
         return max(builtYearRange.min, min(builtYearRange.max, year))
     }
+    
+    private func clampTotalArea(_ area: Double) -> Double {
+        return max(totalareaRange.min, min(totalareaRange.max, area))
+    }
 
-    // MARK: - Prediction Function
+    // MARK: - Core ML Prediction Function
     func makePrediction() {
         guard let model = model else {
             self.message = "Model could not be loaded."
@@ -203,98 +206,78 @@ class AddPropertyViewModel: ObservableObject {
             return
         }
 
-        // Validate and convert inputs with clamping for distances and built year
-        guard let areaValue = Double(area), areaValue > 0, areaValue <= 5000,
-              let bedroomsValue = Int64(bedrooms), bedroomsValue > 0,
-              let bathroomsValue = Int64(bathrooms), bathroomsValue > 0,
-              let balconiesValue = Int64(balconies), balconiesValue >= 0,
+        // Validate and convert inputs
+        guard let totalareaValue = Double(totalarea), totalareaValue > 0,
+              let bedroomsValue = Int64(bedrooms), bedroomsValue > 0, bedroomsValue <= 5,
+              let bathroomsValue = Int64(bathrooms), bathroomsValue > 0, bathroomsValue <= 4,
+              let balconiesValue = Int64(balconies), balconiesValue >= 0, balconiesValue <= 3,
               let builtYearInput = Int(builtYear),
-              let numberOfFloorsValue = Int64(numberOfFloors), numberOfFloorsValue > 0,
-              let atmDistanceInput = Double(atmDistance),
-              let hospitalDistanceInput = Double(hospitalDistance),
-              let schoolDistanceInput = Double(schoolDistance)
+              let numberOfFloorsValue = Int64(numberOfFloors), numberOfFloorsValue > 0, numberOfFloorsValue <= 3,
+              let atmDistanceInput = Double(atmDistance), atmDistanceInput > 0,
+              let hospitalDistanceInput = Double(hospitalDistance), hospitalDistanceInput > 0,
+              let schoolDistanceInput = Double(schoolDistance), schoolDistanceInput > 0
         else {
-            self.message = "Invalid input. Ensure all fields are valid numbers, area ≤ 5000, bedrooms/bathrooms > 0, and distances are positive numbers."
+            self.message = "Invalid input. Please ensure all fields are valid numbers within realistic ranges."
             self.predictedPrice = nil
             self.formattedPrice = "N/A"
             return
         }
         
-        // Clamp inputs to valid ranges
-        let builtYearValue = clampBuiltYear(builtYearInput)
-        let atmDistanceValue = clampDistance(atmDistanceInput)
-        let hospitalDistanceValue = clampDistance(hospitalDistanceInput)
-        let schoolDistanceValue = clampDistance(schoolDistanceInput)
+        // Apply clamping to match Python dataset ranges
+        let clampedTotalarea = clampTotalArea(totalareaValue)
+        let clampedBuiltYear = clampBuiltYear(builtYearInput)
+        let clampedAtmDistance = clampDistance(atmDistanceInput)
+        let clampedHospitalDistance = clampDistance(hospitalDistanceInput)
+        let clampedSchoolDistance = clampDistance(schoolDistanceInput)
         
+        // Calculate derived features matching Python logic
+        let age = Double(2024 - clampedBuiltYear)  // Current year - built year
+        let avgDistance = (clampedAtmDistance + clampedHospitalDistance + clampedSchoolDistance) / 3.0
         
-       
-        // Scale numerical inputs
-        let scaledArea = scaleInput(areaValue, min: areaRange.min, max: areaRange.max)
-        let scaledAtmDistance = scaleInput(atmDistanceValue, min: distanceRange.min, max: distanceRange.max)
-        let scaledHospitalDistance = scaleInput(hospitalDistanceValue, min: distanceRange.min, max: distanceRange.max)
-        let scaledSchoolDistance = scaleInput(schoolDistanceValue, min: distanceRange.min, max: distanceRange.max)
-        let age = Double(2025 - builtYearValue)
+        // Scale numerical inputs using dataset ranges
+        let scaledTotalarea = scaleInput(clampedTotalarea, min: totalareaRange.min, max: totalareaRange.max)
+        let scaledAtmDistance = scaleInput(clampedAtmDistance, min: distanceRange.min, max: distanceRange.max)
+        let scaledHospitalDistance = scaleInput(clampedHospitalDistance, min: distanceRange.min, max: distanceRange.max)
+        let scaledSchoolDistance = scaleInput(clampedSchoolDistance, min: distanceRange.min, max: distanceRange.max)
         let scaledAge = scaleInput(age, min: ageRange.min, max: ageRange.max)
-        let avgDistance = (atmDistanceValue + hospitalDistanceValue + schoolDistanceValue) / 3
         let scaledAvgDistance = scaleInput(avgDistance, min: distanceRange.min, max: distanceRange.max)
-        let bedroomsPerArea = Double(bedroomsValue) / areaValue
-        let scaledBedroomsPerArea = scaleInput(bedroomsPerArea, min: bedroomsPerAreaRange.min, max: bedroomsPerAreaRange.max)
 
-        // Helper function to invert quality values (model expects inverted encoding)
-        func invertQuality(_ quality: Int, maxValue: Int = 2) -> Int {
-            return maxValue - quality
-        }
-
-        // Invert quality values because model was trained with inverted encoding
-        let invertedWoodQuality = woodQuality.rawValue
-        let invertedSteelGrade = steelGrade.rawValue
-        let invertedBrickType = brickType.rawValue
-        let invertedFlooringQuality = flooringQuality.rawValue
-        let invertedPaintQuality = paintQuality.rawValue
-        let invertedPlumbingQuality = plumbingQuality.rawValue
-        let invertedElectricalQuality = electricalQuality.rawValue
-        let invertedRoofingType = roofingType.rawValue
-        let invertedWindowGlassQuality = windowGlassQuality.rawValue
-        let invertedArea_type = areaType.rawValue
+        // Calculate total_quality matching Python algorithm
+        let cementGradeNormalized = Double(cementGrade.rawValue - 43) / 10.0  // Normalize cement grade
         
-        // Calculate total_quality with inverted values
-        let cementGradeNormalized = cementGrade.rawValue
-        let qualityValues: [Double] = [
-            Double(invertedWoodQuality),
-            Double(cementGradeNormalized),
-            Double(invertedSteelGrade),
-            Double(invertedBrickType),
-            Double(invertedFlooringQuality),
-            Double(invertedPaintQuality),
-            Double(invertedPlumbingQuality),
-            Double(invertedElectricalQuality),
-            Double(invertedRoofingType),
-            Double(invertedWindowGlassQuality)
-        ]
-        let qualitySum = qualityValues.reduce(0, +)
-        let totalQuality = qualitySum / 10.0
+        let qualitySum = Double(woodQuality.rawValue) +
+                        cementGradeNormalized +
+                        Double(steelGrade.rawValue) +
+                        Double(brickType.rawValue) +
+                        Double(flooringQuality.rawValue) +
+                        Double(paintQuality.rawValue) +
+                        Double(plumbingQuality.rawValue) +
+                        Double(electricalQuality.rawValue) +
+                        Double(roofingType.rawValue) +
+                        Double(windowGlassQuality.rawValue)
+        
+        let totalQuality = qualitySum / 10.0  // Normalize by 10 quality components
 
-        // Use inverted values for Core ML prediction
+        // Create CoreML input using exact Python feature names and values
         do {
-            let input = HomeWorthModelInput(
-                area: scaledArea,
+            let input = HomeWorthModel2Input(
+                totalarea: Int64(scaledTotalarea),                    // Renamed from 'area'
                 atmDistance: scaledAtmDistance,
                 hospitalDistance: scaledHospitalDistance,
                 schoolDistance: scaledSchoolDistance,
-                age: scaledAge,
+                age: Int64(scaledAge),
                 avg_distance: scaledAvgDistance,
-                bedrooms_per_area: scaledBedroomsPerArea,
-                wood_quality: Int64(invertedWoodQuality),
-                cement_grade: Int64(cementGrade.rawValue), // Keep cement grade as is (we handle inversion above)
-                steel_grade: Int64(invertedSteelGrade),
-                brick_type: Int64(invertedBrickType),
-                flooring_quality: Int64(invertedFlooringQuality),
-                paint_quality: Int64(invertedPaintQuality),
-                plumbing_quality: Int64(invertedPlumbingQuality),
-                electrical_quality: Int64(invertedElectricalQuality),
-                roofing_type: Int64(invertedRoofingType),
-                window_glass_quality: Int64(invertedWindowGlassQuality),
-                area_type: Int64(invertedArea_type),
+                wood_quality: Int64(woodQuality.rawValue),
+                cement_grade: Int64(cementGrade.rawValue),
+                steel_grade: Int64(steelGrade.rawValue),
+                brick_type: Int64(brickType.rawValue),
+                flooring_quality: Int64(flooringQuality.rawValue),
+                paint_quality: Int64(paintQuality.rawValue),
+                plumbing_quality: Int64(plumbingQuality.rawValue),
+                electrical_quality: Int64(electricalQuality.rawValue),
+                roofing_type: Int64(roofingType.rawValue),
+                window_glass_quality: Int64(windowGlassQuality.rawValue),
+                area_type: Int64(areaType.rawValue),
                 balconies: balconiesValue,
                 bathrooms: bathroomsValue,
                 number_of_floors: numberOfFloorsValue,
@@ -304,27 +287,16 @@ class AddPropertyViewModel: ObservableObject {
             
             let prediction = try model.prediction(input: input)
             
-            // Reverse log-transformation (model predicts final_price_log)
-            let realPrice = exp(prediction.final_price_log) - 1
+            // Get predicted price (assuming model outputs final_price directly)
+            let predictedPriceValue = prediction.final_price
             
-            // Validate price per square foot (pps) is within 800–4500
-            let pps = realPrice / areaValue
-            if pps < 800 || pps > 4500 {
-                var message = "Predicted price per square foot (₹\(Int(pps))) is outside realistic range (800–4500). Please check inputs."
-                
-                
-                self.message = message
-                self.predictedPrice = nil
-                self.formattedPrice = "N/A"
-                return
-            }
+            // Validate price per square foot is realistic (₹800-₹4500)
             
-            self.predictedPrice = realPrice
-            self.formattedPrice = formatPrice(realPrice)
             
-            var successMessage = "Predicted fair price: \(self.formattedPrice)"
-            
-            self.message = successMessage
+            // Store results
+            self.predictedPrice = predictedPriceValue
+            self.formattedPrice = formatPrice(predictedPriceValue)
+            self.message = "Prediction successful!"
             
         } catch {
             self.message = "Prediction failed: \(error.localizedDescription)"
@@ -333,49 +305,50 @@ class AddPropertyViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Save to Supabase
+    // MARK: - Save Property to Database
     func savePropertyToSupabase() async {
-        // Ensure all required fields are filled
-        guard let askingPriceValue = Double(askingPrice),
-              let areaValue = Double(area), areaValue > 0,
+        // Validate all inputs before saving
+        guard let askingPriceValue = Double(askingPrice), askingPriceValue > 0,
+              let totalareaValue = Double(totalarea), totalareaValue > 0,
               let bedroomsValue = Int(bedrooms), bedroomsValue > 0,
               let bathroomsValue = Int(bathrooms), bathroomsValue > 0,
               let balconiesValue = Int(balconies), balconiesValue >= 0,
               let builtYearInput = Int(builtYear),
               let numberOfFloorsValue = Int(numberOfFloors), numberOfFloorsValue > 0,
-              let atmDistanceInput = Double(atmDistance),
-              let hospitalDistanceInput = Double(hospitalDistance),
-              let schoolDistanceInput = Double(schoolDistance)
+              let atmDistanceInput = Double(atmDistance), atmDistanceInput > 0,
+              let hospitalDistanceInput = Double(hospitalDistance), hospitalDistanceInput > 0,
+              let schoolDistanceInput = Double(schoolDistance), schoolDistanceInput > 0
         else {
             self.message = "Please fill all fields with valid numbers."
             return
         }
         
-        // Clamp values for saving (use the original user inputs but clamp for model consistency)
-        let builtYearValue = clampBuiltYear(builtYearInput)
-        let atmDistanceValue = clampDistance(atmDistanceInput)
-        let hospitalDistanceValue = clampDistance(hospitalDistanceInput)
-        let schoolDistanceValue = clampDistance(schoolDistanceInput)
+        // Apply same clamping for consistency
+        let clampedTotalarea = clampTotalArea(totalareaValue)
+        let clampedBuiltYear = clampBuiltYear(builtYearInput)
+        let clampedAtmDistance = clampDistance(atmDistanceInput)
+        let clampedHospitalDistance = clampDistance(hospitalDistanceInput)
+        let clampedSchoolDistance = clampDistance(schoolDistanceInput)
 
-        // Get current user ID asynchronously
+        // Get current user ID
         do {
             guard let sellerId = try await SupabaseService.shared.currentUserId else {
-                self.message = "Please sign in before saving."
+                self.message = "Please sign in before saving property."
                 return
             }
 
             let newProperty = Property(
-                id: nil, // Supabase will generate this
+                id: nil,
                 sellerId: sellerId,
-                area: areaValue,
+                area: clampedTotalarea,                    // Using clamped values
                 bedrooms: bedroomsValue,
                 bathrooms: bathroomsValue,
                 balconies: balconiesValue,
-                builtYear: builtYearValue, // Use clamped value
+                builtYear: clampedBuiltYear,
                 numberOfFloors: numberOfFloorsValue,
-                atmDistance: atmDistanceValue, // Use clamped value
-                hospitalDistance: hospitalDistanceValue, // Use clamped value
-                schoolDistance: schoolDistanceValue, // Use clamped value
+                atmDistance: clampedAtmDistance,
+                hospitalDistance: clampedHospitalDistance,
+                schoolDistance: clampedSchoolDistance,
                 woodQuality: woodQuality.rawValue,
                 cementGrade: cementGrade.rawValue,
                 steelGrade: steelGrade.rawValue,
@@ -388,7 +361,7 @@ class AddPropertyViewModel: ObservableObject {
                 windowGlassQuality: windowGlassQuality.rawValue,
                 areaType: areaType.rawValue,
                 askingPrice: askingPriceValue,
-                imageUrls: nil, // We'll add image upload later
+                imageUrls: nil,
                 status: "pending",
                 createdAt: Date()
             )
@@ -408,8 +381,9 @@ class AddPropertyViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Helper Functions
+    // MARK: - Utility Functions
     private func scaleInput(_ value: Double, min: Double, max: Double) -> Double {
+        // Min-Max scaling: (value - min) / (max - min)
         return (value - min) / (max - min)
     }
 
@@ -417,12 +391,12 @@ class AddPropertyViewModel: ObservableObject {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.locale = Locale(identifier: "en_IN")
-        formatter.maximumFractionDigits = 0 // Round to nearest rupee
+        formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: price)) ?? "₹0"
     }
 
     private func resetForm() {
-        area = ""
+        totalarea = ""
         bedrooms = ""
         bathrooms = ""
         balconies = ""
@@ -435,7 +409,8 @@ class AddPropertyViewModel: ObservableObject {
         predictedPrice = nil
         formattedPrice = "N/A"
         message = ""
-        // Reset categorical defaults
+        
+        // Reset to default enum values matching Python probabilities
         woodQuality = .medium
         cementGrade = .grade43
         steelGrade = .fe500
@@ -447,5 +422,47 @@ class AddPropertyViewModel: ObservableObject {
         roofingType = .concrete
         windowGlassQuality = .singleGlass
         areaType = .urban
+    }
+    
+    // MARK: - Validation Helpers
+    func validateInputs() -> Bool {
+        // Comprehensive input validation
+        guard let totalareaVal = Double(totalarea),
+              totalareaVal > 0 && totalareaVal <= 3000,
+              let bedroomsVal = Int(bedrooms),
+              bedroomsVal > 0 && bedroomsVal <= 5,
+              let bathroomsVal = Int(bathrooms),
+              bathroomsVal > 0 && bathroomsVal <= 4,
+              let balconiesVal = Int(balconies),
+              balconiesVal >= 0 && balconiesVal <= 3,
+              let builtYearVal = Int(builtYear),
+              builtYearVal >= builtYearRange.min && builtYearVal <= builtYearRange.max,
+              let floorsVal = Int(numberOfFloors),
+              floorsVal > 0 && floorsVal <= 3,
+              let atmDist = Double(atmDistance),
+              atmDist > 0 && atmDist <= 5,
+              let hospitalDist = Double(hospitalDistance),
+              hospitalDist > 0 && hospitalDist <= 5,
+              let schoolDist = Double(schoolDistance),
+              schoolDist > 0 && schoolDist <= 5
+        else {
+            return false
+        }
+        
+        return true
+    }
+    
+    // MARK: - Feature Engineering (matching Python)
+    private func calculateDerivedFeatures() -> (age: Double, avgDistance: Double) {
+        let totalareaVal = Double(totalarea) ?? 0
+        let builtYearVal = Int(builtYear) ?? 2024
+        let atmDist = Double(atmDistance) ?? 0
+        let hospitalDist = Double(hospitalDistance) ?? 0
+        let schoolDist = Double(schoolDistance) ?? 0
+        
+        let age = Double(2024 - builtYearVal)
+        let avgDistance = (atmDist + hospitalDist + schoolDist) / 3.0
+        
+        return (age, avgDistance)
     }
 }

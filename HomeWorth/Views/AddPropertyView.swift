@@ -8,7 +8,7 @@ struct AddPropertyView: View {
         NavigationView {
             Form {
                 Section(header: Text("Property Details")) {
-                    TextField("Area (sq ft)", text: $viewModel.area)
+                    TextField("Area (sq ft)", text: $viewModel.totalarea)
                         .keyboardType(.decimalPad)
                     TextField("Bedrooms", text: $viewModel.bedrooms)
                         .keyboardType(.numberPad)
