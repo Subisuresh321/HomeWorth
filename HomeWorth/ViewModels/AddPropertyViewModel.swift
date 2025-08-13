@@ -452,17 +452,4 @@ class AddPropertyViewModel: ObservableObject {
         return true
     }
     
-    // MARK: - Feature Engineering (matching Python)
-    private func calculateDerivedFeatures() -> (age: Double, avgDistance: Double) {
-        let totalareaVal = Double(totalarea) ?? 0
-        let builtYearVal = Int(builtYear) ?? 2024
-        let atmDist = Double(atmDistance) ?? 0
-        let hospitalDist = Double(hospitalDistance) ?? 0
-        let schoolDist = Double(schoolDistance) ?? 0
-        
-        let age = Double(2024 - builtYearVal)
-        let avgDistance = (atmDist + hospitalDist + schoolDist) / 3.0
-        
-        return (age, avgDistance)
-    }
 }
