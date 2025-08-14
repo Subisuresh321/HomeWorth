@@ -1,4 +1,4 @@
-// HomeWorth/App/ContentView.swift
+// HomeWorth/App/ContentView.swift - After Fix
 import SwiftUI
 
 struct ContentView: View {
@@ -8,6 +8,7 @@ struct ContentView: View {
         Group {
             if authViewModel.isAuthenticated {
                 AppTabView()
+                    .environmentObject(authViewModel) // <- Added the missing modifier
             } else {
                 AuthenticationView()
                     .environmentObject(authViewModel)

@@ -36,27 +36,23 @@ class SupabaseService {
     
     private let supabaseClient = SupabaseClient(
         supabaseURL: URL(string: "https://tbypgreqkpruvuidczyq.supabase.co")!,
-        supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRieXBncmVxa3BydXZ1aWRjenlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4MDI4NzEsImV4cCI6MjA3MDM3ODg3MX0.Ec6o-pG3fLFTQ7eW_pdOQObWinFsJUDA67qoUH0IyhA" // Your key here
+        supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRieXBncmVxa3BydXZ1aWRjenlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4MDI4NzEsImV4cCI6MjA3MDM3ODg3MX0.Ec6o-pG3fLFTQ7eW_pdOQObWinFsJUDA67qoUH0IyhA"
     )
     
     var currentUserId: UUID? {
-            get async throws {
-                // Fixed: session is async and can throw, so we need async throws
-                return try await supabaseClient.auth.session.user.id
-            }
+        get async throws {
+            return try await supabaseClient.auth.session.user.id
         }
-        
+    }
     
     // MARK: - Auth
-    func signUp(email: String, password: String, completion: @escaping (Result<User, Error>) -> Void) {
+    func signUp(email: String, password: String, userType: String, completion: @escaping (Result<User, Error>) -> Void) {
         Task {
             do {
                 let authResponse = try await supabaseClient.auth.signUp(email: email, password: password)
-                
                 let user = authResponse.user
                 
-                // Fixed: Corrected parameter order - name must precede userType
-                let newUserProfile = User(id: user.id, email: user.email!, name: nil,phoneNumber: nil, userType: "buyer", createdAt: Date())
+                let newUserProfile = User(id: user.id, email: user.email!, name: nil, phoneNumber: nil, userType: userType, createdAt: Date())
                 
                 try await supabaseClient.from("users")
                     .insert(newUserProfile)
@@ -77,10 +73,8 @@ class SupabaseService {
         Task {
             do {
                 let session = try await supabaseClient.auth.signIn(email: email, password: password)
-                
                 let user = session.user
                 
-                // Corrected: user.id is a non-optional UUID. No need to force unwrap.
                 let fetchedUsers: [User] = try await supabaseClient.from("users")
                     .select()
                     .eq("id", value: user.id)
@@ -117,12 +111,125 @@ class SupabaseService {
         }
     }
     
+    // MARK: - User Profiles
+    func fetchCurrentUserProfile(completion: @escaping (Result<User, Error>) -> Void) {
+        Task {
+            do {
+                guard let currentUserId = try await self.currentUserId else {
+                    throw SupabaseError.userNotFound
+                }
+                
+                let fetchedUsers: [User] = try await supabaseClient.from("users")
+                    .select()
+                    .eq("id", value: currentUserId)
+                    .single()
+                    .execute()
+                    .value
+                
+                guard let userProfile = fetchedUsers.first else {
+                    throw SupabaseError.userNotFound
+                }
+                
+                DispatchQueue.main.async {
+                    completion(.success(userProfile))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
+    func fetchUserProfile(userId: UUID, completion: @escaping (Result<User, Error>) -> Void) {
+        Task {
+            do {
+                let userProfiles: [User] = try await supabaseClient.from("users")
+                    .select()
+                    .eq("id", value: userId)
+                    .execute()
+                    .value
+                
+                guard let userProfile = userProfiles.first else {
+                    throw SupabaseError.userNotFound
+                }
+                
+                DispatchQueue.main.async {
+                    completion(.success(userProfile))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
+    func updateUserProfile(user: User, completion: @escaping (Error?) -> Void) {
+        Task {
+            do {
+                _ = try await supabaseClient.from("users")
+                    .update(["name": user.name, "phone_number": user.phoneNumber])
+                    .eq("id", value: user.id)
+                    .execute()
+                
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(error)
+                }
+            }
+        }
+    }
+    
+    func fetchAllUsers(completion: @escaping (Result<[User], Error>) -> Void) {
+        Task {
+            do {
+                let users: [User] = try await supabaseClient.from("users")
+                    .select()
+                    .execute()
+                    .value
+                
+                DispatchQueue.main.async {
+                    completion(.success(users))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
     // MARK: - Properties
     func fetchProperties(completion: @escaping (Result<[Property], Error>) -> Void) {
         Task {
             do {
                 let properties: [Property] = try await supabaseClient.from("properties")
                     .select()
+                    .execute()
+                    .value
+                
+                DispatchQueue.main.async {
+                    completion(.success(properties))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
+    func fetchPropertiesBySeller(sellerId: UUID, completion: @escaping (Result<[Property], Error>) -> Void) {
+        Task {
+            do {
+                let properties: [Property] = try await supabaseClient.from("properties")
+                    .select()
+                    .eq("seller_id", value: sellerId)
+                    .order("created_at", ascending: false)
                     .execute()
                     .value
                 
@@ -149,8 +256,66 @@ class SupabaseService {
                 }
             } catch {
                 DispatchQueue.main.async {
-                    // Fixed: Pass the error directly instead of wrapping in .failure
                     completion(error)
+                }
+            }
+        }
+    }
+    
+    func updatePropertyStatus(propertyId: UUID, newStatus: String, completion: @escaping (Error?) -> Void) {
+        Task {
+            do {
+                _ = try await supabaseClient.from("properties")
+                    .update(["status": newStatus])
+                    .eq("id", value: propertyId)
+                    .execute()
+                
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(error)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Inquiries
+    func createInquiry(inquiry: Inquiry, completion: @escaping (Error?) -> Void) {
+        Task {
+            do {
+                _ = try await supabaseClient.from("inquiries")
+                    .insert(inquiry)
+                    .execute()
+                
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(error)
+                }
+            }
+        }
+    }
+    
+    func fetchInquiries(forPropertyId propertyId: UUID, completion: @escaping (Result<[Inquiry], Error>) -> Void) {
+        Task {
+            do {
+                let inquiries: [Inquiry] = try await supabaseClient.from("inquiries")
+                    .select()
+                    .eq("property_id", value: propertyId)
+                    .order("created_at", ascending: false)
+                    .execute()
+                    .value
+                
+                DispatchQueue.main.async {
+                    completion(.success(inquiries))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
                 }
             }
         }
@@ -167,7 +332,6 @@ class SupabaseService {
             }
             
             do {
-                // Fixed: Removed extraneous 'path:' label
                 _ = try await supabaseClient.storage
                     .from("property-images")
                     .upload(path, data: data)
@@ -187,4 +351,3 @@ class SupabaseService {
         }
     }
 }
-

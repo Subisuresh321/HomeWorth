@@ -1,11 +1,3 @@
-//
-//  AuthenticationView.swift
-//  HomeWorth
-//
-//  Created by Subi Suresh on 11/08/2025.
-//
-
-
 // HomeWorth/Views/Authentication/AuthenticationView.swift
 import SwiftUI
 import Supabase
@@ -13,9 +5,12 @@ import Supabase
 struct AuthenticationView: View {
     @State private var email = ""
     @State private var password = ""
-    @State private var message = ""
     @State private var isSigningUp = false
-    @EnvironmentObject var authViewModel: AuthViewModel // Will be created in the next response
+    @State private var selectedUserType: String = "buyer" // Default user type
+    
+    // Admin user types are not available for new sign-ups.
+    private let userTypes = ["buyer", "seller"]
+    @EnvironmentObject var authViewModel: AuthViewModel
 
     var body: some View {
         VStack(spacing: 20) {
@@ -31,9 +26,21 @@ struct AuthenticationView: View {
             SecureField("Password", text: $password)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
 
+            // Show the user type picker only during sign-up
+            if isSigningUp {
+                Picker("I am a", selection: $selectedUserType) {
+                    ForEach(userTypes, id: \.self) { type in
+                        Text(type.capitalized)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+            }
+
             Button(isSigningUp ? "Sign Up" : "Sign In") {
                 if isSigningUp {
-                    authViewModel.signUp(email: email, password: password)
+                    // Pass the selected user type to the sign-up function
+                    authViewModel.signUp(email: email, password: password, userType: selectedUserType)
                 } else {
                     authViewModel.signIn(email: email, password: password)
                 }
@@ -46,10 +53,12 @@ struct AuthenticationView: View {
 
             Button(isSigningUp ? "Already have an account?" : "Need an account?") {
                 isSigningUp.toggle()
+                // Reset the selected user type when switching forms
+                selectedUserType = "buyer"
             }
             .foregroundColor(.secondary)
             .padding(.top, 10)
-            
+
             if !authViewModel.message.isEmpty {
                 Text(authViewModel.message)
                     .foregroundColor(authViewModel.message.contains("successfully") ? .green : .red)

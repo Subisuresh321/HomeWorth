@@ -24,6 +24,7 @@ struct Property: Codable, Identifiable {
     var roofingType: Int
     var windowGlassQuality: Int
     var areaType: Int
+    var predictedPrice: Double?
     var askingPrice: Double?
     var imageUrls: [String]?
     var status: String

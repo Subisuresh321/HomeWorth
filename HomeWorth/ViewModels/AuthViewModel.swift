@@ -6,33 +6,48 @@ import Supabase
 class AuthViewModel: ObservableObject {
     @Published var isAuthenticated: Bool = false
     @Published var message: String = ""
+    @Published var currentUser: User? = nil // New property to store the user object
 
     init() {
         Task {
             await checkAuthenticationState()
         }
     }
-    
+
     func checkAuthenticationState() async {
         do {
-            // Fixed: Use the async currentUserId property instead of currentSession
             let userId = try await SupabaseService.shared.currentUserId
             self.isAuthenticated = userId != nil
+
+            if self.isAuthenticated {
+                SupabaseService.shared.fetchCurrentUserProfile { result in
+                    Task { @MainActor in
+                        switch result {
+                        case .success(let user):
+                            self.currentUser = user
+                        case .failure(let error):
+                            print("Failed to fetch user profile: \(error.localizedDescription)")
+                        }
+                    }
+                }
+            }
         } catch {
             self.isAuthenticated = false
-            // Only show error message if it's not just "no session" scenario
+            self.currentUser = nil
             if !error.localizedDescription.contains("session") {
                 self.message = "Authentication check failed: \(error.localizedDescription)"
             }
         }
     }
 
-    func signUp(email: String, password: String) {
-        SupabaseService.shared.signUp(email: email, password: password) { result in
+    // Modified signUp function to accept userType
+    func signUp(email: String, password: String, userType: String) {
+        SupabaseService.shared.signUp(email: email, password: password, userType: userType) { result in
             Task { @MainActor in
                 switch result {
                 case .success(let user):
                     self.isAuthenticated = true
+                    self.currentUser = user
                     self.message = "Signed up and logged in successfully! Welcome, \(user.email)"
                 case .failure(let error):
                     self.message = "Sign up failed: \(error.localizedDescription)"
@@ -48,6 +63,7 @@ class AuthViewModel: ObservableObject {
                 switch result {
                 case .success(let user):
                     self.isAuthenticated = true
+                    self.currentUser = user
                     self.message = "Signed in successfully! Welcome, \(user.email)"
                 case .failure(let error):
                     self.message = "Sign in failed: \(error.localizedDescription)"
@@ -64,6 +80,7 @@ class AuthViewModel: ObservableObject {
                     self.message = "Sign out failed: \(error.localizedDescription)"
                 } else {
                     self.isAuthenticated = false
+                    self.currentUser = nil
                     self.message = "You have been signed out."
                 }
             }
