@@ -1,4 +1,10 @@
-// HomeWorth/Views/PropertyDetailView.swift
+//
+//  PropertyDetailView.swift
+//  HomeWorth
+//
+//  Created by Subi Suresh on 14/08/2025.
+//
+
 import SwiftUI
 import Supabase
 
@@ -7,23 +13,51 @@ struct PropertyDetailView: View {
     @State private var showingInquiryAlert = false
     @State private var currentUserId: UUID?
     @State private var inquiryMessage: String = ""
+    
+    // MARK: - Helper Functions
+    
+    // Helper to format currency as a whole number
+    private func formatPrice(_ price: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale(identifier: "en_IN")
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: price)) ?? "₹0"
+    }
 
-    // Helper view for consistent styling of detail rows
-    struct DetailRow: View {
-        let icon: String
-        let label: String
-        let value: String
+    // Helpers to get descriptive strings for categorical features
+    private func woodQualityDescription(for value: Int) -> String {
+        // You would need to define these Enums in a globally accessible file or
+        // directly in this file for this to compile. Assuming they are in scope.
+        return WoodQuality(rawValue: value)?.description ?? "N/A"
+    }
 
-        var body: some View {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(.blue)
-                Text(label)
-                Spacer()
-                Text(value)
-                    .fontWeight(.medium)
-            }
-        }
+    private func cementGradeDescription(for value: Int) -> String {
+        return CementGrade(rawValue: value)?.description ?? "N/A"
+    }
+
+    private func steelGradeDescription(for value: Int) -> String {
+        return SteelGrade(rawValue: value)?.description ?? "N/A"
+    }
+
+    private func brickTypeDescription(for value: Int) -> String {
+        return BrickType(rawValue: value)?.description ?? "N/A"
+    }
+
+    private func flooringQualityDescription(for value: Int) -> String {
+        return FlooringQuality(rawValue: value)?.description ?? "N/A"
+    }
+
+    private func paintQualityDescription(for value: Int) -> String {
+        return PaintQuality(rawValue: value)?.description ?? "N/A"
+    }
+
+    private func plumbingQualityDescription(for value: Int) -> String {
+        return PlumbingQuality(rawValue: value)?.description ?? "N/A"
+    }
+
+    private func electricalQualityDescription(for value: Int) -> String {
+        return ElectricalQuality(rawValue: value)?.description ?? "N/A"
     }
     
     var body: some View {
@@ -57,7 +91,7 @@ struct PropertyDetailView: View {
                 // Property details section
                 VStack(alignment: .leading, spacing: 8) {
                     if let askingPrice = property.askingPrice {
-                        Text("Asking Price: \(String(format: "₹%.2f lakhs", askingPrice))")
+                        Text("Asking Price: \(formatPrice(askingPrice))")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(.green)
@@ -68,9 +102,8 @@ struct PropertyDetailView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    // Display the predicted price here
                     if let predictedPrice = property.predictedPrice {
-                        Text("Predicted Fair Price: \(String(format: "₹%.2f lakhs", predictedPrice))")
+                        Text("Predicted Fair Price: \(formatPrice(predictedPrice))")
                             .font(.headline)
                             .foregroundColor(.blue)
                     } else {
@@ -99,15 +132,15 @@ struct PropertyDetailView: View {
                     
                     Text("Construction Details")
                         .font(.headline)
-                    DetailRow(icon: "tree.fill", label: "Wood Quality", value: "\(property.woodQuality)")
-                    DetailRow(icon: "building.columns.fill", label: "Cement Grade", value: "\(property.cementGrade)")
-                    DetailRow(icon: "gearshape.fill", label: "Steel Grade", value: "\(property.steelGrade)")
-                    DetailRow(icon: "list.bullet.rectangle.portrait", label: "Flooring", value: "\(property.flooringQuality)")
-                    DetailRow(icon: "paintbrush.fill", label: "Paint Quality", value: "\(property.paintQuality)")
-                    DetailRow(icon: "wrench.and.screwdriver.fill", label: "Plumbing", value: "\(property.plumbingQuality)")
-                    DetailRow(icon: "bolt.fill", label: "Electrical", value: "\(property.electricalQuality)")
+                        
+                    DetailRow(icon: "tree.fill", label: "Wood Quality", value: woodQualityDescription(for: property.woodQuality))
+                    DetailRow(icon: "building.columns.fill", label: "Cement Grade", value: cementGradeDescription(for: property.cementGrade))
+                    DetailRow(icon: "gearshape.fill", label: "Steel Grade", value: steelGradeDescription(for: property.steelGrade))
+                    DetailRow(icon: "list.bullet.rectangle.portrait", label: "Flooring", value: flooringQualityDescription(for: property.flooringQuality))
+                    DetailRow(icon: "paintbrush.fill", label: "Paint Quality", value: paintQualityDescription(for: property.paintQuality))
+                    DetailRow(icon: "wrench.and.screwdriver.fill", label: "Plumbing", value: plumbingQualityDescription(for: property.plumbingQuality))
+                    DetailRow(icon: "bolt.fill", label: "Electrical", value: electricalQualityDescription(for: property.electricalQuality))
 
-                    // Display property description
                     if let description = property.description {
                         Divider()
                         Text("Description")
@@ -188,3 +221,4 @@ struct PropertyDetailView: View {
         }
     }
 }
+
