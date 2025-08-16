@@ -350,4 +350,24 @@ class SupabaseService {
             }
         }
     }
+    func deleteUser(userId: UUID, completion: @escaping (Error?) -> Void) {
+        Task {
+            do {
+                // Delete the user from the 'users' table.
+                // This will cascade and delete all associated properties and inquiries due to foreign key constraints.
+                _ = try await supabaseClient.from("users")
+                    .delete()
+                    .eq("id", value: userId)
+                    .execute()
+                
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(error)
+                }
+            }
+        }
+    }
 }

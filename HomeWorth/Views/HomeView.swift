@@ -1,10 +1,4 @@
-//
-//  HomeView.swift
-//  HomeWorth
-//
-//  Created by Subi Suresh on 09/08/2025.
-//
-
+// HomeWorth/Views/HomeView.swift
 import SwiftUI
 
 struct HomeView: View {
@@ -23,8 +17,13 @@ struct HomeView: View {
                         .foregroundColor(.secondary)
                 } else {
                     List(viewModel.properties, id: \.id) { property in
-                        PropertyCardView(property: property)
+                        // The fix is here: wrap the card in a NavigationLink
+                        NavigationLink(destination: PropertyDetailView(property: property)) {
+                            PropertyCardView(property: property)
+                        }
+                        .listRowSeparator(.hidden) // Optional: Hides the list separator line
                     }
+                    .listStyle(.plain) // Optional: To remove the default list style
                 }
             }
             .navigationTitle("Property Listings")

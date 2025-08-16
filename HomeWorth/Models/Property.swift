@@ -27,6 +27,7 @@ struct Property: Codable, Identifiable {
     var predictedPrice: Double?
     var askingPrice: Double?
     var imageUrls: [String]?
+    var description: String?
     var status: String
     var createdAt: Date?
     
@@ -55,6 +56,7 @@ struct Property: Codable, Identifiable {
         case areaType = "area_type"
         case askingPrice = "asking_price"
         case imageUrls = "image_urls"
+        case description
         case status
         case createdAt = "created_at"
     }

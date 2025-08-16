@@ -21,7 +21,7 @@ struct PropertyCardView: View {
             
             // Display the asking price if available
             if let askingPrice = property.askingPrice {
-                Text("Asking Price: ₹\(askingPrice, specifier: "%.2f") lakhs")
+                Text("Asking Price: ₹\(askingPrice, specifier: "%.2f")")
                     .foregroundColor(.green)
                     .fontWeight(.bold)
             } else {

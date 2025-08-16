@@ -12,18 +12,16 @@ struct AppTabView: View {
                     Label("Browse", systemImage: "house.fill")
                 }
             
-            // The "Sell" tab (AddPropertyView) is for a user who wants to become a seller
-            // We'll show this to buyers to allow them to list their first property.
-            // A dedicated "My Listings" tab is for existing sellers.
+            // The "Sell" and "My Listings" tabs are now exclusive to sellers.
             if authViewModel.currentUser?.userType == "seller" {
-                MyPropertiesView()
-                    .tabItem {
-                        Label("My Listings", systemImage: "list.bullet.rectangle")
-                    }
-            } else if authViewModel.currentUser?.userType == "buyer" {
                 AddPropertyView()
                     .tabItem {
                         Label("Sell", systemImage: "plus.circle.fill")
+                    }
+                
+                MyPropertiesView()
+                    .tabItem {
+                        Label("My Listings", systemImage: "list.bullet.rectangle")
                     }
             }
             

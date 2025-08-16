@@ -8,6 +8,24 @@ struct PropertyDetailView: View {
     @State private var currentUserId: UUID?
     @State private var inquiryMessage: String = ""
 
+    // Helper view for consistent styling of detail rows
+    struct DetailRow: View {
+        let icon: String
+        let label: String
+        let value: String
+
+        var body: some View {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(.blue)
+                Text(label)
+                Spacer()
+                Text(value)
+                    .fontWeight(.medium)
+            }
+        }
+    }
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -50,6 +68,17 @@ struct PropertyDetailView: View {
                             .foregroundColor(.secondary)
                     }
                     
+                    // Display the predicted price here
+                    if let predictedPrice = property.predictedPrice {
+                        Text("Predicted Fair Price: \(String(format: "₹%.2f lakhs", predictedPrice))")
+                            .font(.headline)
+                            .foregroundColor(.blue)
+                    } else {
+                        Text("Predicted Fair Price: N/A")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                    }
+                    
                     Divider()
 
                     DetailRow(icon: "square.foot.fill", label: "Area", value: "\(Int(property.area)) sq. ft.")
@@ -62,19 +91,14 @@ struct PropertyDetailView: View {
                     
                     Text("Distances (in km)")
                         .font(.headline)
-                    // Corrected line 65
                     DetailRow(icon: "pin.fill", label: "ATM", value: "\(String(format: "%.2f", property.atmDistance)) km")
-                    // Corrected line 66
                     DetailRow(icon: "cross.case.fill", label: "Hospital", value: "\(String(format: "%.2f", property.hospitalDistance)) km")
-                    // Corrected line 67
                     DetailRow(icon: "graduationcap.fill", label: "School", value: "\(String(format: "%.2f", property.schoolDistance)) km")
                     
                     Divider()
                     
                     Text("Construction Details")
                         .font(.headline)
-                    // You'll need helper functions to convert these raw values to strings
-                    // For now, let's just display the raw integer values
                     DetailRow(icon: "tree.fill", label: "Wood Quality", value: "\(property.woodQuality)")
                     DetailRow(icon: "building.columns.fill", label: "Cement Grade", value: "\(property.cementGrade)")
                     DetailRow(icon: "gearshape.fill", label: "Steel Grade", value: "\(property.steelGrade)")
@@ -82,6 +106,15 @@ struct PropertyDetailView: View {
                     DetailRow(icon: "paintbrush.fill", label: "Paint Quality", value: "\(property.paintQuality)")
                     DetailRow(icon: "wrench.and.screwdriver.fill", label: "Plumbing", value: "\(property.plumbingQuality)")
                     DetailRow(icon: "bolt.fill", label: "Electrical", value: "\(property.electricalQuality)")
+
+                    // Display property description
+                    if let description = property.description {
+                        Divider()
+                        Text("Description")
+                            .font(.headline)
+                        Text(description)
+                            .font(.body)
+                    }
                 }
                 .padding()
                 
@@ -137,7 +170,7 @@ struct PropertyDetailView: View {
             id: nil,
             propertyId: propertyId,
             buyerId: buyerId,
-            sellerId: property.sellerId, // Direct access, no unwrapping needed
+            sellerId: property.sellerId,
             message: "I am interested in your property!",
             createdAt: Date()
         )
@@ -152,24 +185,6 @@ struct PropertyDetailView: View {
                     // TODO: Show a success alert to the user
                 }
             }
-        }
-    }
-}
-
-// A helper view for consistent styling of detail rows
-struct DetailRow: View {
-    let icon: String
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.blue)
-            Text(label)
-            Spacer()
-            Text(value)
-                .fontWeight(.medium)
         }
     }
 }

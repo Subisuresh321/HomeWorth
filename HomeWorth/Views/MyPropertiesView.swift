@@ -23,7 +23,7 @@ struct MyPropertiesView: View {
                                     .font(.headline)
                                 Text("Status: \(property.status.capitalized)")
                                     .foregroundColor(statusColor(for: property.status))
-                                Text("Asking Price: \(property.askingPrice ?? 0, specifier: "₹%.2f lakhs")")
+                                Text("Asking Price: \(property.askingPrice ?? 0, specifier: "₹%.2f")")
                                     .font(.subheadline)
                             }
                         }

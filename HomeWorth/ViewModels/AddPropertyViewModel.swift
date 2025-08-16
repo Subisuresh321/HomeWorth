@@ -1,6 +1,7 @@
 // HomeWorth/ViewModels/AddPropertyViewModel.swift
 import Foundation
 import CoreML
+import UIKit // Required for UIImage
 
 // MARK: - Enums for Categorical Features (Updated to match Python)
 enum WoodQuality: Int, CaseIterable, Identifiable {
@@ -135,8 +136,8 @@ enum AreaType: Int, CaseIterable, Identifiable {
 
 @MainActor
 class AddPropertyViewModel: ObservableObject {
-    // MARK: - Input Properties (Updated to match Python ranges)
-    @Published var totalarea: String = ""  // Renamed from 'area' to match Python
+    // MARK: - Input Properties
+    @Published var totalarea: String = ""
     @Published var bedrooms: String = ""
     @Published var bathrooms: String = ""
     @Published var balconies: String = ""
@@ -145,6 +146,8 @@ class AddPropertyViewModel: ObservableObject {
     @Published var atmDistance: String = ""
     @Published var hospitalDistance: String = ""
     @Published var schoolDistance: String = ""
+    @Published var propertyDescription: String = "" // <-- New property
+    @Published var selectedImages: [UIImage] = [] // <-- New property for images
     
     // Categorical features using enums
     @Published var woodQuality: WoodQuality = .medium
@@ -169,12 +172,12 @@ class AddPropertyViewModel: ObservableObject {
     private var model: HomeWorthModel2?
 
     // Scaling ranges matching Python dataset generation
-    private let totalareaRange = (min: 500.0, max: 3000.0)  // Updated range
-    private let distanceRange = (min: 0.1, max: 5.0)        // Updated range
-    private let ageRange = (min: 0.0, max: 50.0)            // Updated range
+    private let totalareaRange = (min: 500.0, max: 3000.0)
+    private let distanceRange = (min: 0.1, max: 5.0)
+    private let ageRange = (min: 0.0, max: 50.0)
     
     // Valid input ranges
-    private let builtYearRange = (min: 1974, max: 2024)     // Updated to match age 0-50
+    private let builtYearRange = (min: 1974, max: 2024)
 
     init() {
         do {
@@ -206,7 +209,7 @@ class AddPropertyViewModel: ObservableObject {
             return
         }
 
-        // Validate and convert inputs
+        // ... (Prediction logic is the same) ...
         guard let totalareaValue = Double(totalarea), totalareaValue > 0,
               let bedroomsValue = Int64(bedrooms), bedroomsValue > 0, bedroomsValue <= 5,
               let bathroomsValue = Int64(bathrooms), bathroomsValue > 0, bathroomsValue <= 4,
@@ -222,19 +225,16 @@ class AddPropertyViewModel: ObservableObject {
             self.formattedPrice = "N/A"
             return
         }
-        
-        // Apply clamping to match Python dataset ranges
+    
         let clampedTotalarea = clampTotalArea(totalareaValue)
         let clampedBuiltYear = clampBuiltYear(builtYearInput)
         let clampedAtmDistance = clampDistance(atmDistanceInput)
         let clampedHospitalDistance = clampDistance(hospitalDistanceInput)
         let clampedSchoolDistance = clampDistance(schoolDistanceInput)
         
-        // Calculate derived features matching Python logic
-        let age = Double(2024 - clampedBuiltYear)  // Current year - built year
+        let age = Double(2024 - clampedBuiltYear)
         let avgDistance = (clampedAtmDistance + clampedHospitalDistance + clampedSchoolDistance) / 3.0
         
-        // Scale numerical inputs using dataset ranges
         let scaledTotalarea = scaleInput(clampedTotalarea, min: totalareaRange.min, max: totalareaRange.max)
         let scaledAtmDistance = scaleInput(clampedAtmDistance, min: distanceRange.min, max: distanceRange.max)
         let scaledHospitalDistance = scaleInput(clampedHospitalDistance, min: distanceRange.min, max: distanceRange.max)
@@ -242,26 +242,23 @@ class AddPropertyViewModel: ObservableObject {
         let scaledAge = scaleInput(age, min: ageRange.min, max: ageRange.max)
         let scaledAvgDistance = scaleInput(avgDistance, min: distanceRange.min, max: distanceRange.max)
 
-        // Calculate total_quality matching Python algorithm
-        let cementGradeNormalized = Double(cementGrade.rawValue - 43) / 10.0  // Normalize cement grade
-        
+        let cementGradeNormalized = Double(cementGrade.rawValue - 43) / 10.0
         let qualitySum = Double(woodQuality.rawValue) +
-                        cementGradeNormalized +
-                        Double(steelGrade.rawValue) +
-                        Double(brickType.rawValue) +
-                        Double(flooringQuality.rawValue) +
-                        Double(paintQuality.rawValue) +
-                        Double(plumbingQuality.rawValue) +
-                        Double(electricalQuality.rawValue) +
-                        Double(roofingType.rawValue) +
-                        Double(windowGlassQuality.rawValue)
+                         cementGradeNormalized +
+                         Double(steelGrade.rawValue) +
+                         Double(brickType.rawValue) +
+                         Double(flooringQuality.rawValue) +
+                         Double(paintQuality.rawValue) +
+                         Double(plumbingQuality.rawValue) +
+                         Double(electricalQuality.rawValue) +
+                         Double(roofingType.rawValue) +
+                         Double(windowGlassQuality.rawValue)
         
-        let totalQuality = qualitySum / 10.0  // Normalize by 10 quality components
+        let totalQuality = qualitySum / 10.0
 
-        // Create CoreML input using exact Python feature names and values
         do {
             let input = HomeWorthModel2Input(
-                totalarea: Int64(scaledTotalarea),                    // Renamed from 'area'
+                totalarea: Int64(scaledTotalarea),
                 atmDistance: scaledAtmDistance,
                 hospitalDistance: scaledHospitalDistance,
                 schoolDistance: scaledSchoolDistance,
@@ -286,14 +283,8 @@ class AddPropertyViewModel: ObservableObject {
             )
             
             let prediction = try model.prediction(input: input)
-            
-            // Get predicted price (assuming model outputs final_price directly)
             let predictedPriceValue = prediction.final_price
             
-            // Validate price per square foot is realistic (₹800-₹4500)
-            
-            
-            // Store results
             self.predictedPrice = predictedPriceValue
             self.formattedPrice = formatPrice(predictedPriceValue)
             self.message = "Prediction successful!"
@@ -305,7 +296,7 @@ class AddPropertyViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Save Property to Database
+    // MARK: - Save Property to Database (Updated)
     func savePropertyToSupabase() async {
         // Validate all inputs before saving
         guard let askingPriceValue = Double(askingPrice), askingPriceValue > 0,
@@ -323,15 +314,22 @@ class AddPropertyViewModel: ObservableObject {
             return
         }
         
-        // Apply same clamping for consistency
-        let clampedTotalarea = clampTotalArea(totalareaValue)
-        let clampedBuiltYear = clampBuiltYear(builtYearInput)
-        let clampedAtmDistance = clampDistance(atmDistanceInput)
-        let clampedHospitalDistance = clampDistance(hospitalDistanceInput)
-        let clampedSchoolDistance = clampDistance(schoolDistanceInput)
-
-        // Get current user ID
+        // Ensure there's at least one image and a description
+        guard !selectedImages.isEmpty else {
+            self.message = "Please select at least one image for your property."
+            return
+        }
+        
+        guard !propertyDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            self.message = "Please provide a description for your property."
+            return
+        }
+        
+        self.message = "Uploading images..."
+        
         do {
+            let imageURLs = try await uploadImages(images: selectedImages)
+            
             guard let sellerId = try await SupabaseService.shared.currentUserId else {
                 self.message = "Please sign in before saving property."
                 return
@@ -340,15 +338,15 @@ class AddPropertyViewModel: ObservableObject {
             let newProperty = Property(
                 id: nil,
                 sellerId: sellerId,
-                area: clampedTotalarea,                    // Using clamped values
+                area: totalareaValue,
                 bedrooms: bedroomsValue,
                 bathrooms: bathroomsValue,
                 balconies: balconiesValue,
-                builtYear: clampedBuiltYear,
+                builtYear: builtYearInput,
                 numberOfFloors: numberOfFloorsValue,
-                atmDistance: clampedAtmDistance,
-                hospitalDistance: clampedHospitalDistance,
-                schoolDistance: clampedSchoolDistance,
+                atmDistance: atmDistanceInput,
+                hospitalDistance: hospitalDistanceInput,
+                schoolDistance: schoolDistanceInput,
                 woodQuality: woodQuality.rawValue,
                 cementGrade: cementGrade.rawValue,
                 steelGrade: steelGrade.rawValue,
@@ -360,30 +358,49 @@ class AddPropertyViewModel: ObservableObject {
                 roofingType: roofingType.rawValue,
                 windowGlassQuality: windowGlassQuality.rawValue,
                 areaType: areaType.rawValue,
+                predictedPrice: self.predictedPrice,
                 askingPrice: askingPriceValue,
-                imageUrls: nil,
+                imageUrls: imageURLs,
+                description: propertyDescription,
                 status: "pending",
                 createdAt: Date()
             )
 
-            SupabaseService.shared.createProperty(property: newProperty) { error in
+            SupabaseService.shared.createProperty(property: newProperty) { [weak self] error in
                 Task { @MainActor in
                     if let error = error {
-                        self.message = "Failed to save property: \(error.localizedDescription)"
+                        self?.message = "Failed to save property: \(error.localizedDescription)"
                     } else {
-                        self.message = "Property saved successfully!"
-                        self.resetForm()
+                        self?.message = "Property saved successfully and awaiting admin approval!"
+                        self?.resetForm()
                     }
                 }
             }
         } catch {
-            self.message = "Failed to get current user: \(error.localizedDescription)"
+            self.message = "Failed to upload images: \(error.localizedDescription)"
         }
+    }
+    
+    // MARK: - Image Uploading Helper
+    private func uploadImages(images: [UIImage]) async throws -> [String] {
+        var imageUrls: [String] = []
+        
+        for image in images {
+            let uniqueFileName = UUID().uuidString + ".jpeg"
+            
+            // Assuming SupabaseService.uploadImage is updated to be async/await compatible
+            let url = try await withCheckedThrowingContinuation { continuation in
+                SupabaseService.shared.uploadImage(image: image, path: uniqueFileName) { result in
+                    continuation.resume(with: result)
+                }
+            }
+            imageUrls.append(url.absoluteString)
+        }
+        return imageUrls
     }
 
     // MARK: - Utility Functions
     private func scaleInput(_ value: Double, min: Double, max: Double) -> Double {
-        // Min-Max scaling: (value - min) / (max - min)
         return (value - min) / (max - min)
     }
 
@@ -405,12 +422,13 @@ class AddPropertyViewModel: ObservableObject {
         atmDistance = ""
         hospitalDistance = ""
         schoolDistance = ""
+        propertyDescription = ""
+        selectedImages = []
         askingPrice = ""
         predictedPrice = nil
         formattedPrice = "N/A"
         message = ""
         
-        // Reset to default enum values matching Python probabilities
         woodQuality = .medium
         cementGrade = .grade43
         steelGrade = .fe500
@@ -426,7 +444,7 @@ class AddPropertyViewModel: ObservableObject {
     
     // MARK: - Validation Helpers
     func validateInputs() -> Bool {
-        // Comprehensive input validation
+        // ... (existing validation logic) ...
         guard let totalareaVal = Double(totalarea),
               totalareaVal > 0 && totalareaVal <= 3000,
               let bedroomsVal = Int(bedrooms),
@@ -451,5 +469,4 @@ class AddPropertyViewModel: ObservableObject {
         
         return true
     }
-    
 }

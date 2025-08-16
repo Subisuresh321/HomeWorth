@@ -1,9 +1,11 @@
-// HomeWorth/Views/AddPropertyView.swift
+// HomeWorth/Views/AddPropertyView.swift (Modified)
 import SwiftUI
 
 struct AddPropertyView: View {
     @StateObject private var viewModel = AddPropertyViewModel()
-
+    @State private var showingImagePicker = false
+    @State private var acceptDetails = false // <-- New state variable
+    
     var body: some View {
         NavigationView {
             Form {
@@ -88,6 +90,32 @@ struct AddPropertyView: View {
                         }
                     }
                 }
+
+                Section(header: Text("Description")) {
+                    TextEditor(text: $viewModel.propertyDescription)
+                        .frame(height: 100)
+                }
+                
+                Section(header: Text("Images")) {
+                    Button("Select Images") {
+                        showingImagePicker = true
+                    }
+                    
+                    if !viewModel.selectedImages.isEmpty {
+                        ScrollView(.horizontal) {
+                            HStack {
+                                ForEach(viewModel.selectedImages, id: \.self) { image in
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 80, height: 80)
+                                        .clipped()
+                                        .cornerRadius(8)
+                                }
+                            }
+                        }
+                    }
+                }
                 
                 Section(header: Text("Prediction & Pricing")) {
                     Button("Predict Fair Price") {
@@ -105,6 +133,8 @@ struct AddPropertyView: View {
                 }
 
                 Section {
+                    Toggle("I have verified the details and they are true to my knowledge.", isOn: $acceptDetails) // <-- The new toggle
+                        .tint(.green)
                     Button("Save Property") {
                         Task {
                             await viewModel.savePropertyToSupabase()
@@ -112,7 +142,8 @@ struct AddPropertyView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .buttonStyle(.borderedProminent)
-                    .disabled(viewModel.askingPrice.isEmpty)
+                    // The button is now disabled if any of these conditions are false
+                    .disabled(viewModel.askingPrice.isEmpty || viewModel.selectedImages.isEmpty || !acceptDetails)
                 }
                 
                 if !viewModel.message.isEmpty {
@@ -123,6 +154,9 @@ struct AddPropertyView: View {
                 }
             }
             .navigationTitle("Add New Property")
+            .sheet(isPresented: $showingImagePicker) {
+                ImagePicker(selectedImages: $viewModel.selectedImages)
+            }
         }
     }
 }
