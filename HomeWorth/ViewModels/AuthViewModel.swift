@@ -1,24 +1,25 @@
 // HomeWorth/ViewModels/AuthViewModel.swift
 import Foundation
 import Supabase
+import UIKit // Needed for UIImage
 
 @MainActor
 class AuthViewModel: ObservableObject {
     @Published var isAuthenticated: Bool = false
     @Published var message: String = ""
-    @Published var currentUser: User? = nil // New property to store the user object
+    @Published var currentUser: User? = nil
 
     init() {
         Task {
             await checkAuthenticationState()
         }
     }
-
+    
     func checkAuthenticationState() async {
         do {
             let userId = try await SupabaseService.shared.currentUserId
             self.isAuthenticated = userId != nil
-
+            
             if self.isAuthenticated {
                 SupabaseService.shared.fetchCurrentUserProfile { result in
                     Task { @MainActor in
@@ -40,9 +41,9 @@ class AuthViewModel: ObservableObject {
         }
     }
 
-    // Modified signUp function to accept userType
-    func signUp(email: String, password: String, userType: String) {
-        SupabaseService.shared.signUp(email: email, password: password, userType: userType) { result in
+    // Updated signUp function to accept name, phoneNumber, and profileImage
+    func signUp(email: String, password: String, name: String?, phoneNumber: String?, userType: String, profileImage: UIImage?) {
+        SupabaseService.shared.signUp(email: email, password: password, name: name, phoneNumber: phoneNumber, userType: userType, profileImage: profileImage) { result in
             Task { @MainActor in
                 switch result {
                 case .success(let user):

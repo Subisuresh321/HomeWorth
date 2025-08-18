@@ -14,6 +14,7 @@ struct User: Codable, Identifiable {
     var name: String?
     var phoneNumber: String?
     var userType: String // "buyer", "seller", "admin"
+    var profilePhotoUrl: String? //
     var createdAt: Date? // Supabase timestamp
 
     enum CodingKeys: String, CodingKey {
@@ -22,6 +23,7 @@ struct User: Codable, Identifiable {
         case name
         case phoneNumber = "phone_number"
         case userType = "user_type"
+        case profilePhotoUrl = "profile_photo_url" 
         case createdAt = "created_at"
     }
 }

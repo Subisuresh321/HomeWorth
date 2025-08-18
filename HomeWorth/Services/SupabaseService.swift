@@ -46,13 +46,33 @@ class SupabaseService {
     }
     
     // MARK: - Auth
-    func signUp(email: String, password: String, userType: String, completion: @escaping (Result<User, Error>) -> Void) {
+    func signUp(email: String, password: String, name: String?, phoneNumber: String?, userType: String, profileImage: UIImage?, completion: @escaping (Result<User, Error>) -> Void) {
         Task {
             do {
                 let authResponse = try await supabaseClient.auth.signUp(email: email, password: password)
                 let user = authResponse.user
                 
-                let newUserProfile = User(id: user.id, email: user.email!, name: nil, phoneNumber: nil, userType: userType, createdAt: Date())
+                var profilePhotoUrl: String? = nil
+                
+                if let image = profileImage {
+                    let uniqueFileName = UUID().uuidString + ".jpeg"
+                    let path = "profile-photos/\(user.id.uuidString)/\(uniqueFileName)"
+                    
+                    if let imageData = image.jpegData(compressionQuality: 0.8) {
+                        _ = try await supabaseClient.storage.from("profile-photos").upload(path, data: imageData)
+                        profilePhotoUrl = try supabaseClient.storage.from("profile-photos").getPublicURL(path: path).absoluteString
+                    }
+                }
+                
+                let newUserProfile = User(
+                    id: user.id,
+                    email: user.email!,
+                    name: name,
+                    phoneNumber: phoneNumber,
+                    userType: userType,
+                    profilePhotoUrl: profilePhotoUrl,
+                    createdAt: Date()
+                )
                 
                 try await supabaseClient.from("users")
                     .insert(newUserProfile)
@@ -169,7 +189,11 @@ class SupabaseService {
         Task {
             do {
                 _ = try await supabaseClient.from("users")
-                    .update(["name": user.name, "phone_number": user.phoneNumber])
+                    .update([
+                        "name": user.name,
+                        "phone_number": user.phoneNumber,
+                        "profile_photo_url": user.profilePhotoUrl
+                    ])
                     .eq("id", value: user.id)
                     .execute()
                 
@@ -184,25 +208,42 @@ class SupabaseService {
         }
     }
     
-    func fetchAllUsers(completion: @escaping (Result<[User], Error>) -> Void) {
+    func deleteUser(userId: UUID, completion: @escaping (Error?) -> Void) {
         Task {
             do {
-                let users: [User] = try await supabaseClient.from("users")
-                    .select()
+                _ = try await supabaseClient.from("users")
+                    .delete()
+                    .eq("id", value: userId)
                     .execute()
-                    .value
                 
                 DispatchQueue.main.async {
-                    completion(.success(users))
+                    completion(nil)
                 }
             } catch {
                 DispatchQueue.main.async {
-                    completion(.failure(error))
+                    completion(error)
                 }
             }
         }
     }
-    
+    func fetchAllUsers(completion: @escaping (Result<[User], Error>) -> Void) {
+          Task {
+              do {
+                  let users: [User] = try await supabaseClient.from("users")
+                      .select()
+                      .execute()
+                      .value
+                  
+                  DispatchQueue.main.async {
+                      completion(.success(users))
+                  }
+              } catch {
+                  DispatchQueue.main.async {
+                      completion(.failure(error))
+                  }
+              }
+          }
+      }
     // MARK: - Properties
     func fetchProperties(completion: @escaping (Result<[Property], Error>) -> Void) {
         Task {
@@ -322,7 +363,7 @@ class SupabaseService {
     }
     
     // MARK: - Storage
-    func uploadImage(image: UIImage, path: String, completion: @escaping (Result<URL, Error>) -> Void) {
+    func uploadImage(image: UIImage, to bucket: String, path: String, completion: @escaping (Result<URL, Error>) -> Void) {
         Task {
             guard let data = image.jpegData(compressionQuality: 0.8) else {
                 DispatchQueue.main.async {
@@ -333,11 +374,11 @@ class SupabaseService {
             
             do {
                 _ = try await supabaseClient.storage
-                    .from("property-images")
+                    .from(bucket)
                     .upload(path, data: data)
                 
                 let fileURL = try supabaseClient.storage
-                    .from("property-images")
+                    .from(bucket)
                     .getPublicURL(path: path)
                 
                 DispatchQueue.main.async {
@@ -350,22 +391,34 @@ class SupabaseService {
             }
         }
     }
-    func deleteUser(userId: UUID, completion: @escaping (Error?) -> Void) {
+    
+    func uploadProfileImage(image: UIImage, userId: UUID, completion: @escaping (Result<URL, Error>) -> Void) {
         Task {
+            guard let data = image.jpegData(compressionQuality: 0.8) else {
+                DispatchQueue.main.async {
+                    completion(.failure(SupabaseError.fileUploadFailed))
+                }
+                return
+            }
+            
             do {
-                // Delete the user from the 'users' table.
-                // This will cascade and delete all associated properties and inquiries due to foreign key constraints.
-                _ = try await supabaseClient.from("users")
-                    .delete()
-                    .eq("id", value: userId)
-                    .execute()
+                let uniqueFileName = UUID().uuidString + ".jpeg"
+                let path = "profile-photos/\(userId.uuidString)/\(uniqueFileName)"
+                
+                _ = try await supabaseClient.storage
+                    .from("profile-photos")
+                    .upload(path, data: data)
+                
+                let fileURL = try supabaseClient.storage
+                    .from("profile-photos")
+                    .getPublicURL(path: path)
                 
                 DispatchQueue.main.async {
-                    completion(nil)
+                    completion(.success(fileURL))
                 }
             } catch {
                 DispatchQueue.main.async {
-                    completion(error)
+                    completion(.failure(error))
                 }
             }
         }

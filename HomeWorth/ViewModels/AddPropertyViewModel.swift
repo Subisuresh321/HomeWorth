@@ -297,176 +297,177 @@ class AddPropertyViewModel: ObservableObject {
     }
 
     // MARK: - Save Property to Database (Updated)
-    func savePropertyToSupabase() async {
-        // Validate all inputs before saving
-        guard let askingPriceValue = Double(askingPrice), askingPriceValue > 0,
-              let totalareaValue = Double(totalarea), totalareaValue > 0,
-              let bedroomsValue = Int(bedrooms), bedroomsValue > 0,
-              let bathroomsValue = Int(bathrooms), bathroomsValue > 0,
-              let balconiesValue = Int(balconies), balconiesValue >= 0,
-              let builtYearInput = Int(builtYear),
-              let numberOfFloorsValue = Int(numberOfFloors), numberOfFloorsValue > 0,
-              let atmDistanceInput = Double(atmDistance), atmDistanceInput > 0,
-              let hospitalDistanceInput = Double(hospitalDistance), hospitalDistanceInput > 0,
-              let schoolDistanceInput = Double(schoolDistance), schoolDistanceInput > 0
-        else {
-            self.message = "Please fill all fields with valid numbers."
-            return
-        }
-        
-        // Ensure there's at least one image and a description
-        guard !selectedImages.isEmpty else {
-            self.message = "Please select at least one image for your property."
-            return
-        }
-        
-        guard !propertyDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            self.message = "Please provide a description for your property."
-            return
-        }
-        
-        self.message = "Uploading images..."
-        
-        do {
-            let imageURLs = try await uploadImages(images: selectedImages)
-            
-            guard let sellerId = try await SupabaseService.shared.currentUserId else {
-                self.message = "Please sign in before saving property."
+        func savePropertyToSupabase() async {
+            // Validate all inputs before saving
+            guard let askingPriceValue = Double(askingPrice), askingPriceValue > 0,
+                  let totalareaValue = Double(totalarea), totalareaValue > 0,
+                  let bedroomsValue = Int(bedrooms), bedroomsValue > 0,
+                  let bathroomsValue = Int(bathrooms), bathroomsValue > 0,
+                  let balconiesValue = Int(balconies), balconiesValue >= 0,
+                  let builtYearInput = Int(builtYear),
+                  let numberOfFloorsValue = Int(numberOfFloors), numberOfFloorsValue > 0,
+                  let atmDistanceInput = Double(atmDistance), atmDistanceInput > 0,
+                  let hospitalDistanceInput = Double(hospitalDistance), hospitalDistanceInput > 0,
+                  let schoolDistanceInput = Double(schoolDistance), schoolDistanceInput > 0
+            else {
+                self.message = "Please fill all fields with valid numbers."
                 return
             }
+            
+            // Ensure there's at least one image and a description
+            guard !selectedImages.isEmpty else {
+                self.message = "Please select at least one image for your property."
+                return
+            }
+            
+            guard !propertyDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                self.message = "Please provide a description for your property."
+                return
+            }
+            
+            self.message = "Uploading images..."
+            
+            do {
+                let imageURLs = try await uploadImages(images: selectedImages)
+                
+                guard let sellerId = try await SupabaseService.shared.currentUserId else {
+                    self.message = "Please sign in before saving property."
+                    return
+                }
 
-            let newProperty = Property(
-                id: nil,
-                sellerId: sellerId,
-                area: totalareaValue,
-                bedrooms: bedroomsValue,
-                bathrooms: bathroomsValue,
-                balconies: balconiesValue,
-                builtYear: builtYearInput,
-                numberOfFloors: numberOfFloorsValue,
-                atmDistance: atmDistanceInput,
-                hospitalDistance: hospitalDistanceInput,
-                schoolDistance: schoolDistanceInput,
-                woodQuality: woodQuality.rawValue,
-                cementGrade: cementGrade.rawValue,
-                steelGrade: steelGrade.rawValue,
-                brickType: brickType.rawValue,
-                flooringQuality: flooringQuality.rawValue,
-                paintQuality: paintQuality.rawValue,
-                plumbingQuality: plumbingQuality.rawValue,
-                electricalQuality: electricalQuality.rawValue,
-                roofingType: roofingType.rawValue,
-                windowGlassQuality: windowGlassQuality.rawValue,
-                areaType: areaType.rawValue,
-                predictedPrice: self.predictedPrice,
-                askingPrice: askingPriceValue,
-                imageUrls: imageURLs,
-                description: propertyDescription,
-                status: "pending",
-                createdAt: Date()
-            )
+                let newProperty = Property(
+                    id: nil,
+                    sellerId: sellerId,
+                    area: totalareaValue,
+                    bedrooms: bedroomsValue,
+                    bathrooms: bathroomsValue,
+                    balconies: balconiesValue,
+                    builtYear: builtYearInput,
+                    numberOfFloors: numberOfFloorsValue,
+                    atmDistance: atmDistanceInput,
+                    hospitalDistance: hospitalDistanceInput,
+                    schoolDistance: schoolDistanceInput,
+                    woodQuality: woodQuality.rawValue,
+                    cementGrade: cementGrade.rawValue,
+                    steelGrade: steelGrade.rawValue,
+                    brickType: brickType.rawValue,
+                    flooringQuality: flooringQuality.rawValue,
+                    paintQuality: paintQuality.rawValue,
+                    plumbingQuality: plumbingQuality.rawValue,
+                    electricalQuality: electricalQuality.rawValue,
+                    roofingType: roofingType.rawValue,
+                    windowGlassQuality: windowGlassQuality.rawValue,
+                    areaType: areaType.rawValue,
+                    predictedPrice: self.predictedPrice,
+                    askingPrice: askingPriceValue,
+                    imageUrls: imageURLs,
+                    description: propertyDescription,
+                    status: "pending",
+                    createdAt: Date()
+                )
 
-            SupabaseService.shared.createProperty(property: newProperty) { [weak self] error in
-                Task { @MainActor in
-                    if let error = error {
-                        self?.message = "Failed to save property: \(error.localizedDescription)"
-                    } else {
-                        self?.message = "Property saved successfully and awaiting admin approval!"
-                        self?.resetForm()
+                SupabaseService.shared.createProperty(property: newProperty) { [weak self] error in
+                    Task { @MainActor in
+                        if let error = error {
+                            self?.message = "Failed to save property: \(error.localizedDescription)"
+                        } else {
+                            self?.message = "Property saved successfully and awaiting admin approval!"
+                            self?.resetForm()
+                        }
                     }
                 }
+            } catch {
+                self.message = "Failed to upload images: \(error.localizedDescription)"
             }
-        } catch {
-            self.message = "Failed to upload images: \(error.localizedDescription)"
         }
-    }
-    
-    // MARK: - Image Uploading Helper
-    private func uploadImages(images: [UIImage]) async throws -> [String] {
-        var imageUrls: [String] = []
         
-        for image in images {
-            let uniqueFileName = UUID().uuidString + ".jpeg"
+        // MARK: - Image Uploading Helper
+        private func uploadImages(images: [UIImage]) async throws -> [String] {
+            var imageUrls: [String] = []
             
-            // Assuming SupabaseService.uploadImage is updated to be async/await compatible
-            let url = try await withCheckedThrowingContinuation { continuation in
-                SupabaseService.shared.uploadImage(image: image, path: uniqueFileName) { result in
-                    continuation.resume(with: result)
+            for image in images {
+                let uniqueFileName = UUID().uuidString + ".jpeg"
+                
+                // Corrected call with the new 'to' parameter
+                let url = try await withCheckedThrowingContinuation { continuation in
+                    SupabaseService.shared.uploadImage(image: image, to: "property-images", path: uniqueFileName) { result in
+                        continuation.resume(with: result)
+                    }
                 }
+                imageUrls.append(url.absoluteString)
             }
-            imageUrls.append(url.absoluteString)
+            return imageUrls
         }
-        return imageUrls
-    }
 
-    // MARK: - Utility Functions
-    private func scaleInput(_ value: Double, min: Double, max: Double) -> Double {
-        return (value - min) / (max - min)
-    }
+        // MARK: - Utility Functions
+        private func scaleInput(_ value: Double, min: Double, max: Double) -> Double {
+            return (value - min) / (max - min)
+        }
 
-    private func formatPrice(_ price: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = Locale(identifier: "en_IN")
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: price)) ?? "₹0"
-    }
+        private func formatPrice(_ price: Double) -> String {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.locale = Locale(identifier: "en_IN")
+            formatter.maximumFractionDigits = 0
+            return formatter.string(from: NSNumber(value: price)) ?? "₹0"
+        }
 
-    private func resetForm() {
-        totalarea = ""
-        bedrooms = ""
-        bathrooms = ""
-        balconies = ""
-        builtYear = ""
-        numberOfFloors = ""
-        atmDistance = ""
-        hospitalDistance = ""
-        schoolDistance = ""
-        propertyDescription = ""
-        selectedImages = []
-        askingPrice = ""
-        predictedPrice = nil
-        formattedPrice = "N/A"
-        message = ""
-        
-        woodQuality = .medium
-        cementGrade = .grade43
-        steelGrade = .fe500
-        brickType = .redClay
-        flooringQuality = .standard
-        paintQuality = .basic
-        plumbingQuality = .brandedBasic
-        electricalQuality = .branded
-        roofingType = .concrete
-        windowGlassQuality = .singleGlass
-        areaType = .urban
-    }
-    
-    // MARK: - Validation Helpers
-    func validateInputs() -> Bool {
-        // ... (existing validation logic) ...
-        guard let totalareaVal = Double(totalarea),
-              totalareaVal > 0 && totalareaVal <= 3000,
-              let bedroomsVal = Int(bedrooms),
-              bedroomsVal > 0 && bedroomsVal <= 5,
-              let bathroomsVal = Int(bathrooms),
-              bathroomsVal > 0 && bathroomsVal <= 4,
-              let balconiesVal = Int(balconies),
-              balconiesVal >= 0 && balconiesVal <= 3,
-              let builtYearVal = Int(builtYear),
-              builtYearVal >= builtYearRange.min && builtYearVal <= builtYearRange.max,
-              let floorsVal = Int(numberOfFloors),
-              floorsVal > 0 && floorsVal <= 3,
-              let atmDist = Double(atmDistance),
-              atmDist > 0 && atmDist <= 5,
-              let hospitalDist = Double(hospitalDistance),
-              hospitalDist > 0 && hospitalDist <= 5,
-              let schoolDist = Double(schoolDistance),
-              schoolDist > 0 && schoolDist <= 5
-        else {
-            return false
+        private func resetForm() {
+            totalarea = ""
+            bedrooms = ""
+            bathrooms = ""
+            balconies = ""
+            builtYear = ""
+            numberOfFloors = ""
+            atmDistance = ""
+            hospitalDistance = ""
+            schoolDistance = ""
+            propertyDescription = ""
+            selectedImages = []
+            askingPrice = ""
+            predictedPrice = nil
+            formattedPrice = "N/A"
+            message = ""
+            
+            woodQuality = .medium
+            cementGrade = .grade43
+            steelGrade = .fe500
+            brickType = .redClay
+            flooringQuality = .standard
+            paintQuality = .basic
+            plumbingQuality = .brandedBasic
+            electricalQuality = .branded
+            roofingType = .concrete
+            windowGlassQuality = .singleGlass
+            areaType = .urban
         }
         
-        return true
+        // MARK: - Validation Helpers
+        func validateInputs() -> Bool {
+            // ... (existing validation logic) ...
+            guard let totalareaVal = Double(totalarea),
+                  totalareaVal > 0 && totalareaVal <= 3000,
+                  let bedroomsVal = Int(bedrooms),
+                  bedroomsVal > 0 && bedroomsVal <= 5,
+                  let bathroomsVal = Int(bathrooms),
+                  bathroomsVal > 0 && bathroomsVal <= 4,
+                  let balconiesVal = Int(balconies),
+                  balconiesVal >= 0 && balconiesVal <= 3,
+                  let builtYearVal = Int(builtYear),
+                  builtYearVal >= builtYearRange.min && builtYearVal <= builtYearRange.max,
+                  let floorsVal = Int(numberOfFloors),
+                  floorsVal > 0 && floorsVal <= 3,
+                  let atmDist = Double(atmDistance),
+                  atmDist > 0 && atmDist <= 5,
+                  let hospitalDist = Double(hospitalDistance),
+                  hospitalDist > 0 && hospitalDist <= 5,
+                  let schoolDist = Double(schoolDistance),
+                  schoolDist > 0 && schoolDist <= 5
+            else {
+                return false
+            }
+            
+            return true
+        }
     }
-}
+
