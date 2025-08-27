@@ -208,6 +208,25 @@ class SupabaseService {
         }
     }
     
+    func fetchAllUsers(completion: @escaping (Result<[User], Error>) -> Void) {
+        Task {
+            do {
+                let users: [User] = try await supabaseClient.from("users")
+                    .select()
+                    .execute()
+                    .value
+                
+                DispatchQueue.main.async {
+                    completion(.success(users))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
     func deleteUser(userId: UUID, completion: @escaping (Error?) -> Void) {
         Task {
             do {
@@ -226,24 +245,7 @@ class SupabaseService {
             }
         }
     }
-    func fetchAllUsers(completion: @escaping (Result<[User], Error>) -> Void) {
-          Task {
-              do {
-                  let users: [User] = try await supabaseClient.from("users")
-                      .select()
-                      .execute()
-                      .value
-                  
-                  DispatchQueue.main.async {
-                      completion(.success(users))
-                  }
-              } catch {
-                  DispatchQueue.main.async {
-                      completion(.failure(error))
-                  }
-              }
-          }
-      }
+    
     // MARK: - Properties
     func fetchProperties(completion: @escaping (Result<[Property], Error>) -> Void) {
         Task {
