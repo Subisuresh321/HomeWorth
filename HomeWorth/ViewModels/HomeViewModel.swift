@@ -9,7 +9,21 @@ class HomeViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
     
+    // Filter and Sort properties
+    @Published var selectedSortOption: SortOption = .priceDescending
+    @Published var minPrice: String = ""
+    @Published var maxPrice: String = ""
+
     private var mlModel: HomeWorthModel2?
+    private var allApprovedProperties: [Property] = [] // New property to hold raw data
+
+    enum SortOption: String, CaseIterable, Identifiable {
+        case priceAscending = "Price (Low to High)"
+        case priceDescending = "Price (High to Low)"
+        case areaAscending = "Area (Smallest First)"
+        case areaDescending = "Area (Largest First)"
+        var id: String { self.rawValue }
+    }
 
     init() {
         do {
@@ -31,19 +45,45 @@ class HomeViewModel: ObservableObject {
 
                 switch result {
                 case .success(let fetchedProperties):
-                    // Filter for properties with a status of "approved"
                     let approvedProperties = fetchedProperties.filter { $0.status == "approved" }
-                    // Calculate predicted price for each approved property
-                    self.properties = approvedProperties.compactMap { property in
+                    
+                    self.allApprovedProperties = approvedProperties.compactMap { property in
                         var newProperty = property
                         newProperty.predictedPrice = self.makePrediction(for: property)
                         return newProperty
                     }
+                    self.applyFiltersAndSorting()
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
             }
         }
+    }
+    
+    func applyFiltersAndSorting() {
+        var filteredProperties = allApprovedProperties
+        
+        // Filter by price range
+        if let minVal = Double(minPrice), minVal > 0 {
+            filteredProperties = filteredProperties.filter { ($0.askingPrice ?? 0) >= minVal }
+        }
+        if let maxVal = Double(maxPrice), maxVal > 0 {
+            filteredProperties = filteredProperties.filter { ($0.askingPrice ?? 0) <= maxVal }
+        }
+        
+        // Sort the filtered list
+        switch selectedSortOption {
+        case .priceAscending:
+            filteredProperties.sort { ($0.askingPrice ?? 0) < ($1.askingPrice ?? 0) }
+        case .priceDescending:
+            filteredProperties.sort { ($0.askingPrice ?? 0) > ($1.askingPrice ?? 0) }
+        case .areaAscending:
+            filteredProperties.sort { $0.area < $1.area }
+        case .areaDescending:
+            filteredProperties.sort { $0.area > $1.area }
+        }
+        
+        self.properties = filteredProperties
     }
     
     private func makePrediction(for property: Property) -> Double? {
@@ -52,16 +92,13 @@ class HomeViewModel: ObservableObject {
             return nil
         }
         
-        // Input Ranges and Scaling Logic (matching your Python data prep)
         let totalareaRange = (min: 500.0, max: 3000.0)
         let distanceRange = (min: 0.1, max: 5.0)
         let ageRange = (min: 0.0, max: 50.0)
         
-        // Derived Features
         let age = Double(2024 - property.builtYear)
         let avgDistance = (property.atmDistance + property.hospitalDistance + property.schoolDistance) / 3.0
         
-        // Scaling
         let scaledTotalarea = (property.area - totalareaRange.min) / (totalareaRange.max - totalareaRange.min)
         let scaledAtmDistance = (property.atmDistance - distanceRange.min) / (distanceRange.max - distanceRange.min)
         let scaledHospitalDistance = (property.hospitalDistance - distanceRange.min) / (distanceRange.max - distanceRange.min)
@@ -69,18 +106,17 @@ class HomeViewModel: ObservableObject {
         let scaledAge = (age - ageRange.min) / (ageRange.max - ageRange.min)
         let scaledAvgDistance = (avgDistance - distanceRange.min) / (distanceRange.max - distanceRange.min)
         
-        // Total Quality Calculation
         let cementGradeNormalized = Double(property.cementGrade - 43) / 10.0
         let qualitySum = Double(property.woodQuality) + cementGradeNormalized + Double(property.steelGrade) + Double(property.brickType) + Double(property.flooringQuality) + Double(property.paintQuality) + Double(property.plumbingQuality) + Double(property.electricalQuality) + Double(property.roofingType) + Double(property.windowGlassQuality)
         let totalQuality = qualitySum / 10.0
 
         do {
             let input = HomeWorthModel2Input(
-                totalarea: Int64(scaledTotalarea),
+                totalarea: Int64(round(scaledTotalarea)),
                 atmDistance: scaledAtmDistance,
                 hospitalDistance: scaledHospitalDistance,
                 schoolDistance: scaledSchoolDistance,
-                age: Int64(scaledAge),
+                age: Int64(round(scaledAge)),
                 avg_distance: scaledAvgDistance,
                 wood_quality: Int64(property.woodQuality),
                 cement_grade: Int64(property.cementGrade),
