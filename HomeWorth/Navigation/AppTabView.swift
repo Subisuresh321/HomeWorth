@@ -9,6 +9,7 @@ struct AppTabView: View {
             // All users can see the main property listings
             HomeView()
                 .tabItem {
+                    // Removed the foregroundColor modifier to let SwiftUI's tint handle the color
                     Label("Browse", systemImage: "house.fill")
                 }
             
@@ -39,5 +40,6 @@ struct AppTabView: View {
                     Label("Profile", systemImage: "person.fill")
                 }
         }
+        .tint(.black) // <-- The fix: Set the tint of the TabView to black
     }
 }

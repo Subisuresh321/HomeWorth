@@ -1,10 +1,3 @@
-//
-//  PropertyDetailView.swift
-//  HomeWorth
-//
-//  Created by Subi Suresh on 14/08/2025.
-//
-
 import SwiftUI
 import Supabase
 
@@ -12,11 +5,8 @@ struct PropertyDetailView: View {
     let property: Property
     @State private var showingInquiryAlert = false
     @State private var currentUserId: UUID?
-    @State private var inquiryMessage: String = ""
     
     // MARK: - Helper Functions
-    
-    // Helper to format currency as a whole number
     private func formatPrice(_ price: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
@@ -24,154 +14,177 @@ struct PropertyDetailView: View {
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: price)) ?? "₹0"
     }
-
-    // Helpers to get descriptive strings for categorical features
+    
     private func woodQualityDescription(for value: Int) -> String {
-        // You would need to define these Enums in a globally accessible file or
-        // directly in this file for this to compile. Assuming they are in scope.
         return WoodQuality(rawValue: value)?.description ?? "N/A"
     }
-
     private func cementGradeDescription(for value: Int) -> String {
         return CementGrade(rawValue: value)?.description ?? "N/A"
     }
-
     private func steelGradeDescription(for value: Int) -> String {
         return SteelGrade(rawValue: value)?.description ?? "N/A"
     }
-
     private func brickTypeDescription(for value: Int) -> String {
         return BrickType(rawValue: value)?.description ?? "N/A"
     }
-
     private func flooringQualityDescription(for value: Int) -> String {
         return FlooringQuality(rawValue: value)?.description ?? "N/A"
     }
-
     private func paintQualityDescription(for value: Int) -> String {
         return PaintQuality(rawValue: value)?.description ?? "N/A"
     }
-
     private func plumbingQualityDescription(for value: Int) -> String {
         return PlumbingQuality(rawValue: value)?.description ?? "N/A"
     }
-
     private func electricalQualityDescription(for value: Int) -> String {
         return ElectricalQuality(rawValue: value)?.description ?? "N/A"
     }
+    private func roofingTypeDescription(for value: Int) -> String {
+        return RoofingType(rawValue: value)?.description ?? "N/A"
+    }
+    private func windowGlassQualityDescription(for value: Int) -> String {
+        return WindowGlassQuality(rawValue: value)?.description ?? "N/A"
+    }
+    private func areaTypeDescription(for value: Int) -> String {
+        return AreaType(rawValue: value)?.description ?? "N/A"
+    }
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // Display the property images
-                if let imageUrls = property.imageUrls, !imageUrls.isEmpty {
-                    TabView {
-                        ForEach(imageUrls, id: \.self) { imageUrl in
-                            AsyncImage(url: URL(string: imageUrl)) { image in
-                                image.resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .clipped()
-                            } placeholder: {
-                                Color.gray
+        ZStack {
+            LinearGradient(gradient: Gradient(colors: [Color.homeWorthGradientStart, Color.homeWorthGradientEnd]), startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Image Carousel
+                    if let imageUrls = property.imageUrls, !imageUrls.isEmpty {
+                        TabView {
+                            ForEach(imageUrls, id: \.self) { imageUrl in
+                                AsyncImage(url: URL(string: imageUrl)) { image in
+                                    image.resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .clipped()
+                                        .cornerRadius(12)
+                                } placeholder: {
+                                    Color.homeWorthLightGray
+                                        .frame(height: 300)
+                                        .cornerRadius(12)
+                                }
                             }
                         }
-                    }
-                    .frame(height: 300)
-                    .tabViewStyle(PageTabViewStyle())
-                } else {
-                    // Placeholder if no images are available
-                    Image(systemName: "photo.fill")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
                         .frame(height: 300)
-                        .foregroundColor(.secondary)
-                        .padding()
-                }
-
-                // Property details section
-                VStack(alignment: .leading, spacing: 8) {
-                    if let askingPrice = property.askingPrice {
-                        Text("Asking Price: \(formatPrice(askingPrice))")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(.green)
+                        .tabViewStyle(PageTabViewStyle())
                     } else {
-                        Text("Asking Price: N/A")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(.secondary)
+                        Color.homeWorthLightGray.frame(height: 300)
                     }
-                    
-                    if let predictedPrice = property.predictedPrice {
-                        Text("Predicted Fair Price: \(formatPrice(predictedPrice))")
-                            .font(.headline)
-                            .foregroundColor(.blue)
-                    } else {
-                        Text("Predicted Fair Price: N/A")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Divider()
 
-                    DetailRow(icon: "square.foot.fill", label: "Area", value: "\(Int(property.area)) sq. ft.")
-                    DetailRow(icon: "bed.double.fill", label: "Bedrooms", value: "\(property.bedrooms)")
-                    DetailRow(icon: "shower.fill", label: "Bathrooms", value: "\(property.bathrooms)")
-                    DetailRow(icon: "ruler.fill", label: "Number of Floors", value: "\(property.numberOfFloors)")
-                    DetailRow(icon: "calendar", label: "Built Year", value: "\(property.builtYear)")
-                    
-                    Divider()
-                    
-                    Text("Distances (in km)")
-                        .font(.headline)
-                    DetailRow(icon: "pin.fill", label: "ATM", value: "\(String(format: "%.2f", property.atmDistance)) km")
-                    DetailRow(icon: "cross.case.fill", label: "Hospital", value: "\(String(format: "%.2f", property.hospitalDistance)) km")
-                    DetailRow(icon: "graduationcap.fill", label: "School", value: "\(String(format: "%.2f", property.schoolDistance)) km")
-                    
-                    Divider()
-                    
-                    Text("Construction Details")
-                        .font(.headline)
+                    // Prices Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let askingPrice = property.askingPrice {
+                            Text("Asking Price: \(formatPrice(askingPrice))")
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(.homeWorthYellow)
+                        } else {
+                            Text("Asking Price: N/A")
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(.secondary)
+                        }
                         
-                    DetailRow(icon: "tree.fill", label: "Wood Quality", value: woodQualityDescription(for: property.woodQuality))
-                    DetailRow(icon: "building.columns.fill", label: "Cement Grade", value: cementGradeDescription(for: property.cementGrade))
-                    DetailRow(icon: "gearshape.fill", label: "Steel Grade", value: steelGradeDescription(for: property.steelGrade))
-                    DetailRow(icon: "list.bullet.rectangle.portrait", label: "Flooring", value: flooringQualityDescription(for: property.flooringQuality))
-                    DetailRow(icon: "paintbrush.fill", label: "Paint Quality", value: paintQualityDescription(for: property.paintQuality))
-                    DetailRow(icon: "wrench.and.screwdriver.fill", label: "Plumbing", value: plumbingQualityDescription(for: property.plumbingQuality))
-                    DetailRow(icon: "bolt.fill", label: "Electrical", value: electricalQualityDescription(for: property.electricalQuality))
+                        if let predictedPrice = property.predictedPrice {
+                            Text("Predicted Fair Price: \(formatPrice(predictedPrice))")
+                                .font(.subheadline)
+                                .foregroundColor(.homeWorthDarkGray)
+                        } else {
+                            Text("Predicted Fair Price: N/A")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(15)
+                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                    .padding(.horizontal)
+                    .modifier(CardAnimationModifier()) // <-- Animation applied here
+                    
+                    // Core Details Card
+                    VStack(alignment: .leading, spacing: 12) {
+                        DetailRow(icon: "square.fill", label: "Area", value: "\(Int(property.area)) sq. ft.")
+                        DetailRow(icon: "bed.double.fill", label: "Bedrooms", value: "\(property.bedrooms)")
+                        DetailRow(icon: "shower.fill", label: "Bathrooms", value: "\(property.bathrooms)")
+                        DetailRow(icon: "ruler.fill", label: "Number of Floors", value: "\(property.numberOfFloors)")
+                        DetailRow(icon: "calendar", label: "Built Year", value: "\(property.builtYear)")
+                        
+                        Divider()
+
+                        Text("Distances (in km)")
+                            .font(.headline)
+                        DetailRow(icon: "pin.fill", label: "ATM", value: "\(String(format: "%.2f", property.atmDistance)) km")
+                        DetailRow(icon: "cross.case.fill", label: "Hospital", value: "\(String(format: "%.2f", property.hospitalDistance)) km")
+                        DetailRow(icon: "graduationcap.fill", label: "School", value: "\(String(format: "%.2f", property.schoolDistance)) km")
+                    }
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(15)
+                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                    .padding(.horizontal)
+                    .modifier(CardAnimationModifier()) // <-- Animation applied here
+                    
+                    // Construction Details Card
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Construction Details")
+                            .font(.headline)
+                        DetailRow(icon: "tree.fill", label: "Wood Quality", value: woodQualityDescription(for: property.woodQuality))
+                        DetailRow(icon: "building.columns.fill", label: "Cement Grade", value: cementGradeDescription(for: property.cementGrade))
+                        DetailRow(icon: "gearshape.fill", label: "Steel Grade", value: steelGradeDescription(for: property.steelGrade))
+                        DetailRow(icon: "list.bullet.rectangle.portrait", label: "Flooring", value: flooringQualityDescription(for: property.flooringQuality))
+                        DetailRow(icon: "paintbrush.fill", label: "Paint Quality", value: paintQualityDescription(for: property.paintQuality))
+                        DetailRow(icon: "wrench.and.screwdriver.fill", label: "Plumbing", value: plumbingQualityDescription(for: property.plumbingQuality))
+                        DetailRow(icon: "bolt.fill", label: "Electrical", value: electricalQualityDescription(for: property.electricalQuality))
+                        DetailRow(icon: "house.fill", label: "Roofing Type", value: roofingTypeDescription(for: property.roofingType))
+                        DetailRow(icon: "sparkle.magnifyingglass", label: "Window Glass Quality", value: windowGlassQualityDescription(for: property.windowGlassQuality))
+                        DetailRow(icon: "mappin.and.ellipse", label: "Area Type", value: areaTypeDescription(for: property.areaType))
+                    }
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(15)
+                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                    .padding(.horizontal)
+                    .modifier(CardAnimationModifier()) // <-- Animation applied here
 
                     if let description = property.description {
-                        Divider()
-                        Text("Description")
-                            .font(.headline)
-                        Text(description)
-                            .font(.body)
+                        VStack(alignment: .leading) {
+                            Text("Description")
+                                .font(.headline)
+                            Text(description)
+                                .font(.body)
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(15)
+                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                        .padding(.horizontal)
+                        .modifier(CardAnimationModifier()) // <-- Animation applied here
                     }
-                }
-                .padding()
-                
-                Spacer()
-
-                // Inquiry button section
-                if currentUserId == nil {
-                    Text("Sign in to contact the seller.")
-                        .foregroundColor(.secondary)
+                    
+                    // Inquiry button section
+                    if currentUserId != nil && currentUserId != property.sellerId {
+                        Button("Contact Seller") {
+                            showingInquiryAlert = true
+                        }
                         .frame(maxWidth: .infinity)
-                } else if currentUserId == property.sellerId {
-                    Text("You cannot send an inquiry to your own property.")
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Button("Contact Seller") {
-                        showingInquiryAlert = true
+                        .padding()
+                        .background(Color.homeWorthYellow)
+                        .foregroundColor(.homeWorthDarkGray)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.black, lineWidth: 1)
+                        )
+                        .padding()
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                    .padding()
                 }
             }
         }
@@ -212,13 +225,10 @@ struct PropertyDetailView: View {
             DispatchQueue.main.async {
                 if let error = error {
                     print("Error creating inquiry: \(error.localizedDescription)")
-                    // TODO: Show an alert to the user about the failure
                 } else {
                     print("Inquiry sent successfully for property \(propertyId)!")
-                    // TODO: Show a success alert to the user
                 }
             }
         }
     }
 }
-
