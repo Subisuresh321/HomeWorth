@@ -1,11 +1,3 @@
-//
-//  DetailRow.swift
-//  HomeWorth
-//
-//  Created by Subi Suresh on 27/08/2025.
-//
-
-
 // HomeWorth/Views/Components/DetailRow.swift
 import SwiftUI
 
@@ -13,15 +5,28 @@ struct DetailRow: View {
     let icon: String
     let label: String
     let value: String
-
+    
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
+            // Icon with consistent styling
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.deepBlack)
+                .frame(width: 24, height: 24)
+            
+            // Label
             Text(label)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.deepBlack.opacity(0.8))
+            
             Spacer()
+            
+            // Value
             Text(value)
-                .fontWeight(.medium)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.deepBlack)
+                .multilineTextAlignment(.trailing)
         }
+        .padding(.vertical, 8)
     }
 }
