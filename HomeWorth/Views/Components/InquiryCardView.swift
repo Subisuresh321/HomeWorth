@@ -1,4 +1,5 @@
 // HomeWorth/Views/Components/InquiryCardView.swift
+
 import SwiftUI
 
 struct InquiryCardView: View {
@@ -30,6 +31,7 @@ struct InquiryCardView: View {
                 )
         )
         .shadow(color: .deepBlack.opacity(0.1), radius: 8, x: 0, y: 4)
+        .padding(.horizontal, 20)
     }
 }
 
@@ -41,7 +43,6 @@ struct InquiryLoadingView: View {
             ProgressView()
                 .scaleEffect(0.8)
                 .tint(.homeWorthYellow)
-            
             Text("Loading buyer information...")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.deepBlack.opacity(0.7))
@@ -59,12 +60,13 @@ struct InquiryErrorView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.red)
-            
             Text(message)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.red)
                 .multilineTextAlignment(.leading)
         }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -78,7 +80,6 @@ struct InquiryBuyerInfoView: View {
                 Image(systemName: "person.circle.fill")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.homeWorthYellow)
-                
                 Text(buyer.name ?? "Anonymous Buyer")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.deepBlack)
@@ -92,7 +93,6 @@ struct InquiryBuyerInfoView: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.deepBlack.opacity(0.6))
                         .frame(width: 20)
-                    
                     Text(buyer.email)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.deepBlack.opacity(0.8))
@@ -105,7 +105,6 @@ struct InquiryBuyerInfoView: View {
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.deepBlack.opacity(0.6))
                             .frame(width: 20)
-                        
                         Text(phoneNumber)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.deepBlack.opacity(0.8))
@@ -122,7 +121,6 @@ struct InquiryPlaceholderView: View {
             Image(systemName: "questionmark.circle")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(.deepBlack.opacity(0.4))
-            
             Text("Buyer information unavailable")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.deepBlack.opacity(0.6))

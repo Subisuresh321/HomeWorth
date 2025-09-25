@@ -88,37 +88,7 @@ struct ProfileView: View {
     }
 }
 
-// Grid component matching HomeView
-struct SimpleGrid: View {
-    var body: some View {
-        Canvas { context, size in
-            let spacing: CGFloat = 60
-            let lineWidth: CGFloat = 0.5
-            
-            for x in stride(from: 0, through: size.width + spacing, by: spacing) {
-                context.stroke(
-                    Path { path in
-                        path.move(to: CGPoint(x: x, y: 0))
-                        path.addLine(to: CGPoint(x: x, y: size.height))
-                    },
-                    with: .color(.deepBlack.opacity(0.2)),
-                    lineWidth: lineWidth
-                )
-            }
-            
-            for y in stride(from: 0, through: size.height + spacing, by: spacing) {
-                context.stroke(
-                    Path { path in
-                        path.move(to: CGPoint(x: 0, y: y))
-                        path.addLine(to: CGPoint(x: size.width, y: y))
-                    },
-                    with: .color(.deepBlack.opacity(0.2)),
-                    lineWidth: lineWidth
-                )
-            }
-        }
-    }
-}
+
 
 // MARK: - Profile Components
 
@@ -447,6 +417,7 @@ struct AccountActionsCard: View {
         .shadow(color: .deepBlack.opacity(0.08), radius: 12, x: 0, y: 6)
         .alert("Sign Out", isPresented: $showSignOutAlert) {
             Button("Cancel", role: .cancel) { }
+                .foregroundStyle(.blue)
             Button("Sign Out", role: .destructive) {
                 onSignOut()
             }

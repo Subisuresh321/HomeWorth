@@ -132,10 +132,10 @@ class AddPropertyViewModel: ObservableObject {
 
         guard let totalareaValue = Double(totalarea), totalareaValue > 0,
               let bedroomsValue = Int64(bedrooms), bedroomsValue > 0, bedroomsValue <= 5,
-              let bathroomsValue = Int64(bathrooms), bathroomsValue > 0, bathroomsValue <= 4,
-              let balconiesValue = Int64(balconies), balconiesValue >= 0, balconiesValue <= 3,
+              let bathroomsValue = Int64(bathrooms), bathroomsValue > 0, bathroomsValue <= 5,
+              let balconiesValue = Int64(balconies), balconiesValue >= 0, balconiesValue <= 5,
               let builtYearInput = Int(builtYear),
-              let numberOfFloorsValue = Int64(numberOfFloors), numberOfFloorsValue > 0, numberOfFloorsValue <= 3,
+              let numberOfFloorsValue = Int64(numberOfFloors), numberOfFloorsValue > 0, numberOfFloorsValue <= 5,
               let atmDistanceInput = Double(atmDistance), atmDistanceInput > 0,
               let hospitalDistanceInput = Double(hospitalDistance), hospitalDistanceInput > 0,
               let schoolDistanceInput = Double(schoolDistance), schoolDistanceInput > 0
@@ -404,23 +404,23 @@ class AddPropertyViewModel: ObservableObject {
     // MARK: - Validation Helpers
     func validateInputs() -> Bool {
         guard let totalareaVal = Double(totalarea),
-              totalareaVal > 0 && totalareaVal <= 3000,
+              totalareaVal > 0 && totalareaVal <= 4000,
               let bedroomsVal = Int(bedrooms),
               bedroomsVal > 0 && bedroomsVal <= 5,
               let bathroomsVal = Int(bathrooms),
-              bathroomsVal > 0 && bathroomsVal <= 4,
+              bathroomsVal > 0 && bathroomsVal <= 5,
               let balconiesVal = Int(balconies),
-              balconiesVal >= 0 && balconiesVal <= 3,
+              balconiesVal >= 0 && balconiesVal <= 5,
               let builtYearVal = Int(builtYear),
               builtYearVal >= builtYearRange.min && builtYearVal <= builtYearRange.max,
               let floorsVal = Int(numberOfFloors),
-              floorsVal > 0 && floorsVal <= 3,
+              floorsVal > 0 && floorsVal <= 5,
               let atmDist = Double(atmDistance),
-              atmDist > 0 && atmDist <= 5,
+              atmDist > 0 && atmDist <= 6,
               let hospitalDist = Double(hospitalDistance),
-              hospitalDist > 0 && hospitalDist <= 5,
+              hospitalDist > 0 && hospitalDist <= 6,
               let schoolDist = Double(schoolDistance),
-              schoolDist > 0 && schoolDist <= 5
+              schoolDist > 0 && schoolDist <= 6
         else {
             return false
         }

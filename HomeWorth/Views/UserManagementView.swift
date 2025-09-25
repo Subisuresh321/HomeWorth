@@ -4,6 +4,13 @@ import SwiftUI
 struct UserManagementView: View {
     @StateObject private var viewModel = UserManagementViewModel()
     
+    // Simple and direct admin filtering
+    private var nonAdminUsers: [User] {
+        viewModel.users.filter { user in
+            user.userType.lowercased() != "admin"
+        }
+    }
+    
     var body: some View {
         ZStack {
             // Background gradient - exactly like HomeView
@@ -46,12 +53,12 @@ struct UserManagementView: View {
                         FuturisticUserLoadingView()
                     } else if let errorMessage = viewModel.errorMessage {
                         FuturisticUserErrorView(message: errorMessage)
-                    } else if viewModel.users.isEmpty {
+                    } else if nonAdminUsers.isEmpty {
                         FuturisticEmptyUsersView()
                     } else {
                         ScrollView {
                             LazyVStack(spacing: 16) {
-                                ForEach(viewModel.users, id: \.id) { user in
+                                ForEach(nonAdminUsers, id: \.id) { user in
                                     FuturisticUserCard(
                                         user: user,
                                         onDelete: { viewModel.deleteUser(user: user) }
@@ -78,8 +85,6 @@ struct UserManagementView: View {
     }
 }
 
-
-
 // MARK: - Futuristic User Components
 
 struct FuturisticUserLoadingView: View {
@@ -103,6 +108,7 @@ struct FuturisticUserLoadingView: View {
                 .foregroundColor(.deepBlack)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.clear)
     }
 }
 
@@ -126,6 +132,7 @@ struct FuturisticUserErrorView: View {
                 .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.clear)
     }
 }
 
@@ -141,7 +148,7 @@ struct FuturisticEmptyUsersView: View {
                     .font(.system(size: 22, weight: .bold, design: .monospaced))
                     .foregroundColor(.deepBlack)
                 
-                Text("Database appears to be empty or connection failed.")
+                Text("No buyers or sellers found in the database.")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.deepBlack.opacity(0.7))
                     .multilineTextAlignment(.center)
@@ -149,6 +156,7 @@ struct FuturisticEmptyUsersView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.clear)
     }
 }
 
@@ -248,7 +256,7 @@ struct FuturisticUserCard: View {
                 onDelete()
             }
         } message: {
-            Text("Are you sure you want to delete this user? This action cannot be undone.")
+            Text("Are you sure you want to delete this user?")
         }
     }
     

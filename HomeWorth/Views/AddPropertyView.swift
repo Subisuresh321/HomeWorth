@@ -1,15 +1,16 @@
 // HomeWorth/Views/AddPropertyView.swift
+
 import SwiftUI
 
 struct AddPropertyView: View {
     @StateObject private var viewModel = AddPropertyViewModel()
     @State private var showingImagePicker = false
     @State private var acceptDetails = false
-    @State private var isLoading = false  // LOCAL LOADING STATE
+    @State private var isLoading = false
     
     var body: some View {
         ZStack {
-            // Futuristic background gradient
+            // Futuristic background gradient - exactly like HomeView
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color.homeWorthGradientStart,
@@ -21,61 +22,65 @@ struct AddPropertyView: View {
             )
             .ignoresSafeArea()
             
-            NavigationView {
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        // Header
-                        Text("ADD NEW PROPERTY")
-                            .font(.system(size: 28, weight: .black, design: .monospaced))
-                            .foregroundColor(.deepBlack)
-                            .shadow(color: .white.opacity(0.6), radius: 2, x: 1, y: 1)
-                            .padding(.top, 20)
-                        
-                        // Property Details Section
-                        AddPropertyDetailsCard(viewModel: viewModel)
-                        
-                        // Distance Details Section
-                        AddDistanceDetailsCard(viewModel: viewModel)
-                        
-                        // Construction Quality Section
-                        AddConstructionQualityCard(viewModel: viewModel)
-                        
-                        // Description Section
-                        AddPropertyDescriptionCard(viewModel: viewModel)
-                        
-                        // Images Section
-                        AddPropertyImagesCard(
-                            selectedImages: viewModel.selectedImages,
-                            onSelectImages: { showingImagePicker = true }
-                        )
-                        
-                        // AI Prediction Section
-                        AddAIPredictionCard(viewModel: viewModel)
-                        
-                        // Save Section - FIXED WITH LOCAL LOADING
-                        AddSavePropertyCard(
-                            acceptDetails: $acceptDetails,
-                            isLoading: $isLoading,
-                            message: viewModel.message,
-                            onSave: {
-                                isLoading = true
-                                Task {
-                                    await viewModel.savePropertyToSupabase()
-                                    DispatchQueue.main.async {
-                                        isLoading = false
-                                    }
+            // Grid overlay
+            SimpleGrid()
+                .opacity(0.05)
+            
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // Header
+                    Text("ADD NEW PROPERTY")
+                        .font(.system(size: 28, weight: .black, design: .monospaced))
+                        .foregroundColor(.deepBlack)
+                        .shadow(color: .white.opacity(0.6), radius: 2, x: 1, y: 1)
+                        .padding(.top, 20)
+                    
+                    // Property Details Section
+                    AddPropertyDetailsCard(viewModel: viewModel)
+                    
+                    // Distance Details Section
+                    AddDistanceDetailsCard(viewModel: viewModel)
+                    
+                    // Construction Quality Section
+                    AddConstructionQualityCard(viewModel: viewModel)
+                    
+                    // Description Section
+                    AddPropertyDescriptionCard(viewModel: viewModel)
+                    
+                    // Images Section
+                    AddPropertyImagesCard(
+                        selectedImages: viewModel.selectedImages,
+                        onSelectImages: { showingImagePicker = true }
+                    )
+                    
+                    // AI Prediction Section
+                    AddAIPredictionCard(viewModel: viewModel)
+                    
+                    // Save Section
+                    AddSavePropertyCard(
+                        acceptDetails: $acceptDetails,
+                        isLoading: $isLoading,
+                        message: viewModel.message,
+                        onSave: {
+                            isLoading = true
+                            Task {
+                                await viewModel.savePropertyToSupabase()
+                                DispatchQueue.main.async {
+                                    isLoading = false
                                 }
                             }
-                        )
-                        
-                        // Bottom spacing
-                        Spacer(minLength: 100)
-                    }
-                    .padding(.horizontal, 20)
+                        }
+                    )
+                    
+                    // Bottom spacing
+                    Spacer(minLength: 100)
                 }
-                .navigationBarHidden(true)
+                .padding(.horizontal, 20)
             }
         }
+        .navigationTitle("Add Property")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar) // Force black text for back button
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(selectedImages: $viewModel.selectedImages)
         }
@@ -140,13 +145,23 @@ struct AddPropertyDetailsCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.white.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.7),
+                                    Color.homeWorthYellow.opacity(0.5)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
                 )
         )
-        .shadow(color: .deepBlack.opacity(0.15), radius: 12, x: 0, y: 6)
+        .shadow(color: .deepBlack.opacity(0.08), radius: 12, x: 0, y: 6)
     }
 }
 
@@ -182,13 +197,23 @@ struct AddDistanceDetailsCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.white.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.7),
+                                    Color.homeWorthYellow.opacity(0.5)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
                 )
         )
-        .shadow(color: .deepBlack.opacity(0.15), radius: 12, x: 0, y: 6)
+        .shadow(color: .deepBlack.opacity(0.08), radius: 12, x: 0, y: 6)
     }
 }
 
@@ -202,7 +227,6 @@ struct AddConstructionQualityCard: View {
                 .foregroundColor(.deepBlack)
             
             VStack(spacing: 16) {
-                // FIXED: Removed generic pickers, using direct Picker implementation
                 HStack(spacing: 12) {
                     QualityPickerSection(
                         title: "WOOD QUALITY",
@@ -284,13 +308,23 @@ struct AddConstructionQualityCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.white.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.7),
+                                    Color.homeWorthYellow.opacity(0.5)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
                 )
         )
-        .shadow(color: .deepBlack.opacity(0.15), radius: 12, x: 0, y: 6)
+        .shadow(color: .deepBlack.opacity(0.08), radius: 12, x: 0, y: 6)
     }
 }
 
@@ -320,13 +354,23 @@ struct AddPropertyDescriptionCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.white.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.7),
+                                    Color.homeWorthYellow.opacity(0.5)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
                 )
         )
-        .shadow(color: .deepBlack.opacity(0.15), radius: 12, x: 0, y: 6)
+        .shadow(color: .deepBlack.opacity(0.08), radius: 12, x: 0, y: 6)
     }
 }
 
@@ -344,7 +388,6 @@ struct AddPropertyImagesCard: View {
                 HStack(spacing: 12) {
                     Image(systemName: "camera.fill")
                         .font(.system(size: 18, weight: .semibold))
-                    
                     Text("SELECT IMAGES")
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                 }
@@ -385,13 +428,23 @@ struct AddPropertyImagesCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.white.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.7),
+                                    Color.homeWorthYellow.opacity(0.5)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
                 )
         )
-        .shadow(color: .deepBlack.opacity(0.15), radius: 12, x: 0, y: 6)
+        .shadow(color: .deepBlack.opacity(0.08), radius: 12, x: 0, y: 6)
     }
 }
 
@@ -408,20 +461,15 @@ struct AddAIPredictionCard: View {
                 HStack(spacing: 12) {
                     Image(systemName: "brain.head.profile")
                         .font(.system(size: 18, weight: .semibold))
-                    
                     Text("GET AI PREDICTION")
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                 }
-                .foregroundColor(.deepBlack)
+                .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.blue.opacity(0.8))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.deepBlack, lineWidth: 1)
-                        )
+                        .fill(.blue)
                 )
                 .shadow(color: .blue.opacity(0.4), radius: 6, x: 0, y: 3)
             }
@@ -439,19 +487,29 @@ struct AddAIPredictionCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.white.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.7),
+                                    Color.homeWorthYellow.opacity(0.5)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
                 )
         )
-        .shadow(color: .deepBlack.opacity(0.15), radius: 12, x: 0, y: 6)
+        .shadow(color: .deepBlack.opacity(0.08), radius: 12, x: 0, y: 6)
     }
 }
 
 struct AddSavePropertyCard: View {
     @Binding var acceptDetails: Bool
-    @Binding var isLoading: Bool  // FIXED: Use binding to local loading state
+    @Binding var isLoading: Bool
     let message: String
     let onSave: () -> Void
     
@@ -522,17 +580,27 @@ struct AddSavePropertyCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.white.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.7),
+                                    Color.homeWorthYellow.opacity(0.5)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
                 )
         )
-        .shadow(color: .deepBlack.opacity(0.15), radius: 12, x: 0, y: 6)
+        .shadow(color: .deepBlack.opacity(0.08), radius: 12, x: 0, y: 6)
     }
 }
 
-// MARK: - Fixed Reusable Input Components
+// MARK: - Reusable Input Components
 
 struct AddPropertyInputField: View {
     let title: String
@@ -563,7 +631,8 @@ struct AddPropertyInputField: View {
     }
 }
 
-// FIXED: Non-generic quality picker to avoid type constraints errors
+// MARK: - Fixed Quality Picker (Remove CustomStringConvertible requirement)
+
 struct QualityPickerSection<T>: View where T: CaseIterable, T: Hashable {
     let title: String
     @Binding var selection: T
@@ -577,8 +646,9 @@ struct QualityPickerSection<T>: View where T: CaseIterable, T: Hashable {
             
             Picker(title, selection: $selection) {
                 ForEach(Array(cases), id: \.self) { option in
-                    Text("\(option)")
+                    Text("\(option)")  // FIXED: Just use String interpolation instead of .description
                         .tag(option)
+                        
                 }
             }
             .pickerStyle(.menu)
@@ -592,6 +662,10 @@ struct QualityPickerSection<T>: View where T: CaseIterable, T: Hashable {
                             .stroke(Color.deepBlack.opacity(0.2), lineWidth: 1)
                     )
             )
+            .tint(.deepBlack)
         }
     }
 }
+
+
+

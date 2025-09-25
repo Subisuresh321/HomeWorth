@@ -1,41 +1,158 @@
 // HomeWorth/Views/AdminDashboardView.swift
+
 import SwiftUI
 
 struct AdminDashboardView: View {
     @StateObject private var propertyViewModel = AdminDashboardViewModel()
     
     var body: some View {
-        ZStack {
-            // Futuristic background gradient
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.homeWorthGradientStart.opacity(0.3),
-                    Color.homeWorthGradientEnd.opacity(0.2),
-                    Color.homeWorthYellow.opacity(0.1)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            TabView {
-                // Properties Management Tab
-                AdminPropertyManagementView(viewModel: propertyViewModel)
-                    .tabItem {
-                        Label("Properties", systemImage: "list.bullet.rectangle.fill")
-                    }
+        TabView {
+            // Properties Management Tab
+            ZStack {
+                // Background gradient for Properties tab
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.homeWorthGradientStart,
+                        Color.homeWorthGradientEnd,
+                        Color.homeWorthYellow.opacity(0.9)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
                 
-                // User Management Tab
-                UserManagementView()
-                    .tabItem {
-                        Label("Users", systemImage: "person.3.fill")
-                    }
+                // Grid overlay
+                SimpleGrid()
+                    .opacity(0.05)
+                
+                AdminPropertyManagementView(viewModel: propertyViewModel)
             }
-            .accentColor(.homeWorthYellow)
+            .tabItem {
+                Label("Properties", systemImage: "list.bullet.rectangle.fill")
+            }
+            
+            // User Management Tab
+            ZStack {
+                // Background gradient for Users tab
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.homeWorthGradientStart,
+                        Color.homeWorthGradientEnd,
+                        Color.homeWorthYellow.opacity(0.9)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                // Grid overlay
+                SimpleGrid()
+                    .opacity(0.05)
+                
+                UserManagementView()
+            }
+            .tabItem {
+                Label("Users", systemImage: "person.3.fill")
+            }
         }
-        .navigationTitle("Admin Dashboard")
+        .accentColor(.homeWorthYellow)
+        .navigationBarHidden(true)
         .onAppear {
             propertyViewModel.fetchProperties()
+        }
+    }
+}
+
+
+// Grid component matching other views
+struct SimpleGrid: View {
+    var body: some View {
+        Canvas { context, size in
+            let spacing: CGFloat = 60
+            let lineWidth: CGFloat = 0.5
+            
+            for x in stride(from: 0, through: size.width + spacing, by: spacing) {
+                context.stroke(
+                    Path { path in
+                        path.move(to: CGPoint(x: x, y: 0))
+                        path.addLine(to: CGPoint(x: x, y: size.height))
+                    },
+                    with: .color(.deepBlack.opacity(0.2)),
+                    lineWidth: lineWidth
+                )
+            }
+            
+            for y in stride(from: 0, through: size.height + spacing, by: spacing) {
+                context.stroke(
+                    Path { path in
+                        path.move(to: CGPoint(x: 0, y: y))
+                        path.addLine(to: CGPoint(x: size.width, y: y))
+                    },
+                    with: .color(.deepBlack.opacity(0.2)),
+                    lineWidth: lineWidth
+                )
+            }
+        }
+    }
+}
+
+
+// MARK: - User Management Content for Admin Dashboard
+struct UserManagementContentView: View {
+    @StateObject private var viewModel = UserManagementViewModel()
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Fixed header with proper spacing
+            HStack {
+                Text("USER MANAGEMENT")
+                    .font(.system(size: 28, weight: .black, design: .monospaced))
+                    .foregroundColor(.deepBlack)
+                    .shadow(color: .white.opacity(0.6), radius: 2, x: 1, y: 1)
+                
+                Spacer()
+                
+                Image(systemName: "person.3.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.deepBlack)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 30)
+            
+            // Content area with proper spacing
+            Group {
+                if viewModel.isLoading {
+                    FuturisticUserLoadingView()
+                } else if let errorMessage = viewModel.errorMessage {
+                    FuturisticUserErrorView(message: errorMessage)
+                } else if viewModel.users.isEmpty {
+                    FuturisticEmptyUsersView()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(viewModel.users, id: \.id) { user in
+                                FuturisticUserCard(
+                                    user: user,
+                                    onDelete: { viewModel.deleteUser(user: user) }
+                                )
+                                .padding(.horizontal, 20)
+                            }
+                        }
+                        .padding(.vertical, 10)
+                    }
+                    .background(Color.clear)
+                }
+            }
+            
+            Spacer()
+        }
+        .background(Color.clear)
+        .onAppear {
+            viewModel.fetchAllUsers()
+        }
+        .refreshable {
+            viewModel.fetchAllUsers()
         }
     }
 }
@@ -45,21 +162,22 @@ struct AdminPropertyManagementView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Futuristic header
+            // Fixed header with stable height
             HStack {
-                Text("ADMIN DASHBOARD")
-                    .font(.system(size: 28, weight: .black, design: .monospaced))
+                Text("PROPERTIES MANAGEMENT")
+                    .font(.system(size: 24, weight: .black, design: .monospaced))
                     .foregroundColor(.deepBlack)
                     .shadow(color: .white.opacity(0.6), radius: 2, x: 1, y: 1)
                 
                 Spacer()
                 
-                Image(systemName: "shield.righthalf.filled")
+                Image(systemName: "list.bullet.rectangle.fill")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.deepBlack)
             }
             .padding(.horizontal, 20)
-            .padding(.top, 10)
+            .padding(.top, 20)
+            .padding(.bottom, 30)
             
             // Filter section
             AdminFilterCard(
@@ -67,7 +185,7 @@ struct AdminPropertyManagementView: View {
                 onFilterChange: { viewModel.applyFilter() }
             )
             
-            // Content area - FIXED: Explicit ForEach with proper data source
+            // Content area
             Group {
                 if viewModel.isLoading {
                     AdminLoadingView()
@@ -76,37 +194,38 @@ struct AdminPropertyManagementView: View {
                 } else if viewModel.pendingProperties.isEmpty {
                     AdminEmptyView(filterType: viewModel.selectedFilter)
                 } else {
-                    // FIXED: Use explicit List with ForEach to avoid generic inference error
-                    List {
-                        ForEach(viewModel.pendingProperties, id: \.id) { property in
-                            AdminPropertyCardView(
-                                property: property,
-                                onApprove: { propertyId in
-                                    viewModel.approveProperty(propertyId: propertyId)
-                                },
-                                onReject: { propertyId in
-                                    viewModel.rejectProperty(propertyId: propertyId)
-                                }
-                            )
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(viewModel.pendingProperties, id: \.id) { property in
+                                AdminPropertyCardView(
+                                    property: property,
+                                    onApprove: { propertyId in
+                                        viewModel.approveProperty(propertyId: propertyId)
+                                    },
+                                    onReject: { propertyId in
+                                        viewModel.rejectProperty(propertyId: propertyId)
+                                    }
+                                )
+                                .padding(.horizontal, 20)
+                            }
                         }
+                        .padding(.vertical, 10)
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
                     .background(Color.clear)
                 }
             }
             .padding(.top, 20)
+            
+            Spacer()
         }
-        .navigationBarHidden(true)
+        .background(Color.clear)
         .refreshable {
             viewModel.fetchProperties()
         }
     }
 }
 
-// MARK: - Admin Components (Same as before)
+// MARK: - Admin Components
 
 struct AdminFilterCard: View {
     @Binding var selectedFilter: String
@@ -134,15 +253,24 @@ struct AdminFilterCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.white.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.7),
+                                    Color.homeWorthYellow.opacity(0.5)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
                 )
         )
-        .shadow(color: .deepBlack.opacity(0.1), radius: 8, x: 0, y: 4)
+        .shadow(color: .deepBlack.opacity(0.08), radius: 12, x: 0, y: 6)
         .padding(.horizontal, 20)
-        .padding(.top, 20)
     }
 }
 
@@ -167,6 +295,7 @@ struct AdminLoadingView: View {
                 .foregroundColor(.deepBlack)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.clear)
     }
 }
 
@@ -190,6 +319,7 @@ struct AdminErrorView: View {
                 .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.clear)
     }
 }
 
@@ -215,6 +345,7 @@ struct AdminEmptyView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.clear)
     }
     
     private func emptyIcon(for filter: String) -> String {
@@ -235,5 +366,4 @@ struct AdminEmptyView: View {
         }
     }
 }
-
 
