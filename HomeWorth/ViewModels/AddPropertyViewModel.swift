@@ -41,7 +41,7 @@ class AddPropertyViewModel: ObservableObject {
     private var model: HomeWorthModel2?
 
     // Scaling ranges matching Python dataset generation
-    private let totalareaRange = (min: 500.0, max: 3000.0)
+    private let totalareaRange = (min: 500.0, max: 4000.0)
     private let distanceRange = (min: 0.1, max: 5.0)
     private let ageRange = (min: 0.0, max: 50.0)
     
