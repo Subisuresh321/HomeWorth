@@ -42,7 +42,7 @@ struct MyPropertiesView: View {
                         } else {
                             // Optimized property list
                             List(viewModel.myProperties.indices, id: \.self) { index in
-                                NavigationLink(destination: PropertyDetailView(property: viewModel.myProperties[index])) {
+                                NavigationLink(destination: SellerPropertyDetailView(property: viewModel.myProperties[index])) {
                                     PropertyCardView(
                                         property: viewModel.myProperties[index]
                                     )
