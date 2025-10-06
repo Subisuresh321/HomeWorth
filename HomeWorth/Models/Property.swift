@@ -30,6 +30,9 @@ struct Property: Codable, Identifiable {
     var description: String?
     var status: String
     var createdAt: Date?
+    var latitude: Double?
+    var longitude: Double?
+    var address: String?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -59,5 +62,8 @@ struct Property: Codable, Identifiable {
         case description
         case status
         case createdAt = "created_at"
+        case latitude
+        case longitude
+        case address
     }
 }

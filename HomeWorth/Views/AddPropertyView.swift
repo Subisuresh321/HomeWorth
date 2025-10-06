@@ -41,6 +41,8 @@ struct AddPropertyView: View {
                     // Distance Details Section
                     AddDistanceDetailsCard(viewModel: viewModel)
                     
+                    //Map picker
+                    AddLocationCard(viewModel: viewModel)
                     // Construction Quality Section
                     AddConstructionQualityCard(viewModel: viewModel)
                     
@@ -667,5 +669,95 @@ struct QualityPickerSection<T>: View where T: CaseIterable, T: Hashable {
     }
 }
 
+// MARK: - Location Card Component
+struct AddLocationCard: View {
+    @ObservedObject var viewModel: AddPropertyViewModel
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("PROPERTY LOCATION")
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundColor(.deepBlack)
+            
+            VStack(spacing: 16) {
+                Button(action: { viewModel.showLocationPicker = true }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "map.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                        Text(viewModel.latitude != nil ? "CHANGE LOCATION" : "SELECT ON MAP")
+                            .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    }
+                    .foregroundColor(.deepBlack)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(viewModel.latitude != nil ? Color.green.opacity(0.3) : Color.homeWorthYellow.opacity(0.8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.deepBlack, lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: .homeWorthYellow.opacity(0.4), radius: 6, x: 0, y: 3)
+                }
+                
+                if let lat = viewModel.latitude, let lon = viewModel.longitude {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "mappin.circle.fill")
+                                .foregroundColor(.red)
+                            Text("Location Selected")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.green)
+                        }
+                        
+                        if let address = viewModel.address {
+                            Text(address)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(.deepBlack.opacity(0.8))
+                        }
+                        
+                        Text("Coordinates: \(lat, specifier: "%.6f"), \(lon, specifier: "%.6f")")
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundColor(.deepBlack.opacity(0.6))
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.7))
+                    )
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.white.opacity(0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.7),
+                                    Color.homeWorthYellow.opacity(0.5)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
+                )
+        )
+        .shadow(color: .deepBlack.opacity(0.08), radius: 12, x: 0, y: 6)
+        .sheet(isPresented: $viewModel.showLocationPicker) {
+            LocationPickerView(
+                latitude: $viewModel.latitude,
+                longitude: $viewModel.longitude,
+                address: $viewModel.address
+            )
+        }
+    }
+}
 
 

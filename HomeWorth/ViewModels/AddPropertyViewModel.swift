@@ -30,13 +30,17 @@ class AddPropertyViewModel: ObservableObject {
     @Published var roofingType: RoofingType = .concrete
     @Published var windowGlassQuality: WindowGlassQuality = .singleGlass
     @Published var areaType: AreaType = .urban
+    @Published var latitude: Double?
+    @Published var longitude: Double?
+    @Published var address: String?
+    @Published var showLocationPicker = false
 
     // MARK: - Output Properties
     @Published var predictedPrice: Double?
     @Published var formattedPrice: String = "N/A"
     @Published var message: String = ""
     @Published var askingPrice: String = ""
-
+    
     // The Core ML model instance
     private var model: HomeWorthModel2?
 
@@ -281,7 +285,10 @@ class AddPropertyViewModel: ObservableObject {
                 imageUrls: imageURLs,
                 description: propertyDescription,
                 status: "pending",
-                createdAt: Date()
+                createdAt: Date(),
+                latitude: self.latitude,        // NEW
+                longitude: self.longitude,      // NEW
+                address: self.address
             )
 
             SupabaseService.shared.createProperty(property: newProperty) { [weak self] error in
@@ -399,6 +406,9 @@ class AddPropertyViewModel: ObservableObject {
         roofingType = .concrete
         windowGlassQuality = .singleGlass
         areaType = .urban
+        latitude = nil
+        longitude = nil
+        address = ""
     }
     
     // MARK: - Validation Helpers
