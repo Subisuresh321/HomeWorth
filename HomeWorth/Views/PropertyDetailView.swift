@@ -1,6 +1,7 @@
 // HomeWorth/Views/PropertyDetailView.swift
 import SwiftUI
 import Supabase
+import MapKit
 
 struct PropertyDetailView: View {
     let property: Property
@@ -88,6 +89,9 @@ struct PropertyDetailView: View {
                     
                     // Construction Quality Section
                     ConstructionDetailsCard(property: property)
+                    
+                    // Location Section - NEW
+                    PropertyLocationCard(property: property)
                     
                     // Description Section (if available)
                     if let description = property.description, !description.isEmpty {

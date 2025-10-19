@@ -2,6 +2,7 @@
 
 import SwiftUI
 import Supabase
+import MapKit
 
 struct SellerPropertyDetailView: View {
     @State var property: Property
@@ -93,6 +94,9 @@ struct SellerPropertyDetailView: View {
                     
                     // Construction Quality Section
                     SellerConstructionDetailsCard(property: property)
+                    
+                    // Location Section - NEW
+                    SellerPropertyLocationCard(property: property)
                     
                     // Description Section (if available)
                     if let description = property.description, !description.isEmpty {
